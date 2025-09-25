@@ -1,21 +1,28 @@
 import pgzrun
 from random import randint
 
-WIDTH = 500
-HEIGHT = 400
+WIDTH = 700
+HEIGHT = 500
 
 # world options
 bg = Actor('background')
 gravity = 5
-ground = 363
+ground = HEIGHT - 37
 
 # PLAYER CONFIGS
 player = Actor('player_idle')
 player.x = WIDTH/2
 player.y = HEIGHT - player.height/2 - 5
+player.runing = False
+player.speed = 2
+player.max_stamin = 50
+player.stamin = 0
 player.is_jumping = False
-player.jump_height = 50
-player.jump_force = 8
+player.jump_timer = 0
+player.jump_height = 70
+player.jump_force = 10
+player.hitbox_w = 30
+player.hitbox_h = 60
 
 # BOSS CONFIGS
 boss = Actor('boss')
@@ -23,16 +30,39 @@ boss.x = WIDTH/2
 boss.steps = .5
 boss.atack_rate = 500
 boss.clock = 0
+'''
+# boss eye
+eye = Actor()
+eye.x = 120
+eye.y = 120
+'''
 
 # BOSS SHOOT CONFIGS
-missil = Actor('missil_0')
-missil.x = 0
-missil.y = boss.y
-missil.speed = 1
-missil.images = ['missil_0', 'missil_1']
-missil.fps = 10
-missil.is_fired = False
+missile = Actor('missile_0')
+missile.x = 0
+missile.y = boss.y
+missile.speed = 1
+missile.images = ['missile_0', 'missile_1']
+missile.fps = 10
+missile.is_fired = False
 
+def get_hitbox(actor):
+    return Rect(
+        actor.x - actor.hitbox_w/2,   # deslocamento horizontal da posição
+        actor.y - 25,                 # deslocamento vertical da posição
+        actor.hitbox_w, actor.hitbox_h          # largura e altura da hitbox personalizada
+    )
+
+def on_key_down(key):
+    if key == keys.LSHIFT and player.stamin == player.max_stamin and (player.runing == False):
+        player.runing = True
+        player.speed = 4
+
+
+def on_key_up(key):
+    if key == keys.LSHIFT:
+        player.speed = 2
+        player.runing = False
 
 
 def update():
@@ -41,7 +71,7 @@ def update():
         ### TO DO ###
         exit()
 
-    ### WORLD ACTIONS
+    ### WORLD ACTIONS ----------------------------------------
     # gravity actions
     if player.y < ground:
         player.y += gravity
@@ -50,69 +80,92 @@ def update():
     if player.y > ground:
         player.y = ground
 
-    ### PLAYER ACTIONS
+    ### PLAYER ACTIONS ----------------------------------------
     # left and right
-    if (keyboard.right or keyboard.d) and player.x < 475:
-        player.x += 2
+    if (keyboard.right or keyboard.d) and player.x < WIDTH - 25:
+        player.x += player.speed
     if (keyboard.left  or keyboard.a) and player.x > 25:
-        player.x -= 2
+        player.x -= player.speed
  
     # check conditions for jump
     if keyboard.space:
-        if player.y == ground:
+        if player.y == ground and player.jump_timer > 20:
             player.is_jumping = True
         if player.is_jumping:
             player.y -= player.jump_force
-    
-    # change jump variable when reach max height     
-    if player.y <= ground - player.jump_height:
+
+    # add one tick for timer    
+    player.jump_timer += 1
+
+    # change jump variable when reach max height
+    if (player.y <= ground - player.jump_height):
         player.is_jumping = False
+        player.jump_timer = 0
+
+    # charge stamin
+    if player.stamin < player.max_stamin and (player.runing == False):
+        player.stamin += 0.5
+        print(player.stamin)
+
+    if player.stamin <= 0 and on_key_up(keys.LSHIFT):
+        player.runing = False
+        player.speed = 2
+
+    if player.runing:
+        player.stamin -= 1
+
+    # verify colission player missile
+    if get_hitbox(player).colliderect(missile._rect):
+        print('atingido')
    
 
-    ### BOSS ACTIONS
+    ### BOSS ACTIONS ----------------------------------------
     boss.clock += 1
 
     # left and right
     boss.x += boss.steps
-    if boss.x >= 360 or boss.x <= 140:
+    if boss.x >= WIDTH - 140 or boss.x <= 140:
         boss.steps = boss.steps * -1
     
     # boss atacks
     if boss.clock == boss.atack_rate:
-        missil.x = boss.x
-        missil.y = boss.y
-        missil.is_fired = True
+        missile.x = boss.x
+        missile.y = boss.y
+        missile.is_fired = True
         boss.clock = 0
 
-    # MISSIL ACTIONS
-    if missil.y > HEIGHT:
-        missil.y = -20
-        missil.x = 0
-        missil.is_fired = False
+    # MISSILE ACTIONS ----------------------------------------
+    if missile.y > HEIGHT:
+        missile.y = -20
+        missile.x = 0
+        missile.is_fired = False
 
-    if missil.is_fired:
-        missil.y += missil.speed
-        if missil.x > player.x:
-            missil.x -= 1
-        elif missil.x < player.x:
-            missil.x += 1
+    if missile.is_fired:
+        missile.y += missile.speed
+        if missile.x > player.x:
+            missile.x -= 1
+        elif missile.x < player.x:
+            missile.x += 1
 
 """ TEST 
     rand = randint(0, 50)
     if rand == 20:
-        missil.x = randint(50, 450)
+        missile.x = randint(50, 450)
         print('atacou')
 
 def on_mouse_down(pos, button):
-    missil.x = boss.x
+    missile.x = boss.x
     print("Mouse button", button, "clicked at", pos)
-    print(missil._rect)
+    print(missile._rect)
 """
 
 
-### DRAW SPRITES
+### DRAW SPRITES ----------------------------------------
 def draw():
     bg.draw()
     player.draw()
     boss.draw()
-    missil.draw()
+    missile.draw()
+    
+    hitbox = get_hitbox(player)
+    screen.draw.rect(hitbox, "red")
