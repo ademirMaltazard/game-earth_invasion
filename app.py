@@ -30,12 +30,6 @@ boss.x = WIDTH/2
 boss.steps = .5
 boss.atack_rate = 500
 boss.clock = 0
-'''
-# boss eye
-eye = Actor()
-eye.x = 120
-eye.y = 120
-'''
 
 # BOSS SHOOT CONFIGS
 missile = Actor('missile_0')
