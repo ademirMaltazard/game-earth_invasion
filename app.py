@@ -10,16 +10,12 @@ gravity = 5
 ground = 363
 
 # PLAYER CONFIGS
-player_walk_Frames = ['player_walk_0','player_walk_1', 'player_walk_2', 'player_walk_3']
 player = Actor('player_idle')
 player.x = WIDTH/2
 player.y = HEIGHT - player.height/2 - 5
 player.is_jumping = False
 player.jump_height = 50
 player.jump_force = 8
-player.frame_index = 0
-player.frame_timer = 0
-player.frame_speed = 0.15
 
 # BOSS CONFIGS
 boss = Actor('boss')
@@ -58,12 +54,6 @@ def update():
     # left and right
     if (keyboard.right or keyboard.d) and player.x < 475:
         player.x += 2
-        player.frame_timer += player.frame_speed
-        if player.frame_timer >= 1:
-            player.frame_timer = 0
-            player.frame_index = (player.frame_index + 1) % len(player_walk_Frames)  # próximo frame
-            player.image = player_walk_Frames[player.frame_index]            # troca sprite
-
     if (keyboard.left  or keyboard.a) and player.x > 25:
         player.x -= 2
  
@@ -93,13 +83,12 @@ def update():
         missil.y = boss.y
         missil.is_fired = True
         boss.clock = 0
-        print('atacou')
 
     # MISSIL ACTIONS
     if missil.y > HEIGHT:
-        missil.y = 20
+        missil.y = -20
+        missil.x = 0
         missil.is_fired = False
-        print('missil resetado')
 
     if missil.is_fired:
         missil.y += missil.speed
@@ -107,9 +96,9 @@ def update():
             missil.x -= 1
         elif missil.x < player.x:
             missil.x += 1
-        print('em trajeto')
 
-    """rand = randint(0, 50)
+""" TEST 
+    rand = randint(0, 50)
     if rand == 20:
         missil.x = randint(50, 450)
         print('atacou')
@@ -117,7 +106,8 @@ def update():
 def on_mouse_down(pos, button):
     missil.x = boss.x
     print("Mouse button", button, "clicked at", pos)
-    print(missil._rect)"""
+    print(missil._rect)
+"""
 
 
 ### DRAW SPRITES
