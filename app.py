@@ -19,10 +19,11 @@ player.max_stamin = 50
 player.stamin = 0
 player.is_jumping = False
 player.jump_timer = 0
-player.jump_height = 70
+player.jump_height = 90
 player.jump_force = 10
 player.hitbox_w = 30
 player.hitbox_h = 60
+player.desloc_y = 25
 
 # BOSS CONFIGS
 boss = Actor('boss')
@@ -36,16 +37,43 @@ missile = Actor('missile_0')
 missile.x = 0
 missile.y = boss.y
 missile.speed = 1
-missile.images = ['missile_0', 'missile_1']
-missile.fps = 10
+missile.frames = ['missile_0', 'missile_1', 'missile_2', 'missile_1',]
+missile.frame_index = 0
+missile.fps = 0.1
+missile.frame_timer = 40
 missile.is_fired = False
+missile.hitbox_w = 13
+missile.hitbox_h = 32
+missile.desloc_y = 15
+
+# EXPLOSION
+explosion = Actor('explosion_0')
+explosion.x = 0
+explosion.y = 0
+explosion.explode = False
+explosion.timer = 40
+explosion.frame_timer = 20
+explosion.fps = 0.1
+explosion.frame_index = 0
+explosion.frames = ['explosion_0', 'explosion_1', 'explosion_2', 'explosion_3']
 
 def get_hitbox(actor):
     return Rect(
         actor.x - actor.hitbox_w/2,   # deslocamento horizontal da posição
-        actor.y - 25,                 # deslocamento vertical da posição
+        actor.y - actor.desloc_y,                 # deslocamento vertical da posição
         actor.hitbox_w, actor.hitbox_h          # largura e altura da hitbox personalizada
     )
+
+def animate(actor):
+    actor.frame_timer += actor.fps
+    if actor.frame_timer >= 1:
+        print(actor.frame_index)
+        actor.frame_timer = 0
+        actor.frame_index = (actor.frame_index + 1) % len(actor.frames)
+        print(actor.frames[actor.frame_index])
+        return actor.frames[actor.frame_index]
+    else:
+        return actor.frames[actor.frame_index]
 
 def on_key_down(key):
     if key == keys.LSHIFT and player.stamin == player.max_stamin and (player.runing == False):
@@ -109,7 +137,7 @@ def update():
         player.stamin -= 1
 
     # verify colission player missile
-    if get_hitbox(player).colliderect(missile._rect):
+    if get_hitbox(player).colliderect(get_hitbox(missile)):
         print('atingido')
    
 
@@ -121,7 +149,7 @@ def update():
     if boss.x >= WIDTH - 140 or boss.x <= 140:
         boss.steps = boss.steps * -1
     
-    # boss atacks
+    # boss atack
     if boss.clock == boss.atack_rate:
         missile.x = boss.x
         missile.y = boss.y
@@ -129,17 +157,34 @@ def update():
         boss.clock = 0
 
     # MISSILE ACTIONS ----------------------------------------
-    if missile.y > HEIGHT:
+    # 
+    if get_hitbox(missile).y >= ground:
+        explosion.x = missile.x
+        explosion.y = missile.y - 15
+        explosion.explode = True
         missile.y = -20
         missile.x = 0
         missile.is_fired = False
 
+    # fired
     if missile.is_fired:
         missile.y += missile.speed
         if missile.x > player.x:
             missile.x -= 1
         elif missile.x < player.x:
             missile.x += 1
+        # avança o contador de tempo
+        missile.image = animate(missile)
+        print('image ', missile.image)
+
+    # EXPLOSION ACTIONS
+    if explosion.explode and explosion.timer > 0:
+        explosion.timer -= 1
+        explosion.image = animate(explosion)
+    
+    if explosion.timer <= 0:
+        explosion.timer = 30
+        explosion.explode = False
 
 """ TEST 
     rand = randint(0, 50)
@@ -161,5 +206,10 @@ def draw():
     boss.draw()
     missile.draw()
     
-    hitbox = get_hitbox(player)
-    screen.draw.rect(hitbox, "red")
+    if explosion.explode:
+        explosion.draw()
+
+    P_hitbox = get_hitbox(player)
+    M_hitbox = get_hitbox(missile)
+    screen.draw.rect(P_hitbox, "red")
+    screen.draw.rect(M_hitbox, "red")
