@@ -1,18 +1,22 @@
+from os import environ
 import pgzrun
+import pygame
 from random import randint
 
 WIDTH = 700
 HEIGHT = 500
+# Diz ao SDL para centralizar a janela
+environ['SDL_VIDEO_CENTERED'] = '1'
 
 # world options
 bg = Actor('background')
 gravity = 5
-ground = HEIGHT - 37
+ground = HEIGHT - 16
 
 # PLAYER CONFIGS
 player = Actor('player_idle')
 player.x = WIDTH/2
-player.y = HEIGHT - player.height/2 - 5
+player.y = HEIGHT - player.height * 2
 player.runing = False
 player.speed = 2
 player.max_stamin = 50
@@ -43,8 +47,8 @@ missile.fps = 0.1
 missile.frame_timer = 40
 missile.is_fired = False
 missile.hitbox_w = 13
-missile.hitbox_h = 32
-missile.desloc_y = 15
+missile.hitbox_h = 18
+missile.desloc_y = -3 #-10
 
 # EXPLOSION
 explosion = Actor('explosion_0')
@@ -57,6 +61,7 @@ explosion.fps = 0.1
 explosion.frame_index = 0
 explosion.frames = ['explosion_0', 'explosion_1', 'explosion_2', 'explosion_3']
 
+# get functions
 def get_hitbox(actor):
     return Rect(
         actor.x - actor.hitbox_w/2,   # deslocamento horizontal da posição
@@ -64,23 +69,27 @@ def get_hitbox(actor):
         actor.hitbox_w, actor.hitbox_h          # largura e altura da hitbox personalizada
     )
 
+def get_base(actor):
+    return actor.y + actor.height / 2
+
+# execute animation
 def animate(actor):
     actor.frame_timer += actor.fps
     if actor.frame_timer >= 1:
-        print(actor.frame_index)
         actor.frame_timer = 0
         actor.frame_index = (actor.frame_index + 1) % len(actor.frames)
-        print(actor.frames[actor.frame_index])
         return actor.frames[actor.frame_index]
     else:
         return actor.frames[actor.frame_index]
 
+# when key is pressed
 def on_key_down(key):
-    if key == keys.LSHIFT and player.stamin == player.max_stamin and (player.runing == False):
+    if key == keys.LSHIFT and player.stamin == player.max_stamin and (player.runing == False) and (keyboard.left  or keyboard.a or keyboard.right or keyboard.d):
         player.runing = True
         player.speed = 4
 
 
+# when key is released
 def on_key_up(key):
     if key == keys.LSHIFT:
         player.speed = 2
@@ -95,12 +104,12 @@ def update():
 
     ### WORLD ACTIONS ----------------------------------------
     # gravity actions
-    if player.y < ground:
+    if get_base(player) < ground:
         player.y += gravity
     
     # set player in ground
-    if player.y > ground:
-        player.y = ground
+    if get_base(player) > ground:
+        player.y = ground - player.height / 2
 
     ### PLAYER ACTIONS ----------------------------------------
     # left and right
@@ -111,32 +120,34 @@ def update():
  
     # check conditions for jump
     if keyboard.space:
-        if player.y == ground and player.jump_timer > 20:
+        if get_base(player) == ground and player.jump_timer > 20:
             player.is_jumping = True
+            player.stamin -= player.max_stamin / 2
         if player.is_jumping:
             player.y -= player.jump_force
 
-    # add one tick for timer    
+    # add one tick for timer
     player.jump_timer += 1
 
     # change jump variable when reach max height
-    if (player.y <= ground - player.jump_height):
+    if (get_base(player) <= ground - player.jump_height):
         player.is_jumping = False
         player.jump_timer = 0
 
     # charge stamin
     if player.stamin < player.max_stamin and (player.runing == False):
         player.stamin += 0.5
-        print(player.stamin)
 
+    # stop player run
     if player.stamin <= 0 and on_key_up(keys.LSHIFT):
         player.runing = False
         player.speed = 2
 
+    # decrease stamina when runing
     if player.runing:
         player.stamin -= 1
 
-    # verify colission player missile
+    # verify colission player -> missile
     if get_hitbox(player).colliderect(get_hitbox(missile)):
         print('atingido')
    
@@ -158,7 +169,7 @@ def update():
 
     # MISSILE ACTIONS ----------------------------------------
     # 
-    if get_hitbox(missile).y >= ground:
+    if get_base(get_hitbox(missile)) >= ground:
         explosion.x = missile.x
         explosion.y = missile.y - 15
         explosion.explode = True
@@ -171,11 +182,16 @@ def update():
         missile.y += missile.speed
         if missile.x > player.x:
             missile.x -= 1
+            original = images.missile_0 # pega a imagem original do arquivo
+            girada = pygame.transform.rotate(original, 45)
+
+            # Atualiza a imagem do ator
+            missile._surf = girada
+            missile._update_pos()
         elif missile.x < player.x:
             missile.x += 1
         # avança o contador de tempo
-        missile.image = animate(missile)
-        print('image ', missile.image)
+        #missile.image = animate(missile)
 
     # EXPLOSION ACTIONS
     if explosion.explode and explosion.timer > 0:
@@ -202,14 +218,26 @@ def on_mouse_down(pos, button):
 ### DRAW SPRITES ----------------------------------------
 def draw():
     bg.draw()
+
     player.draw()
-    boss.draw()
-    missile.draw()
+    P_hitbox = get_hitbox(player)
+    screen.draw.rect(P_hitbox, "red") # FOR DEBUG
     
+    boss.draw()
+    
+    if missile.is_fired:
+        missile.draw()
+        M_hitbox = get_hitbox(missile)
+        screen.draw.rect(M_hitbox, "red") # FOR DEBUG
+
     if explosion.explode:
         explosion.draw()
 
-    P_hitbox = get_hitbox(player)
-    M_hitbox = get_hitbox(missile)
-    screen.draw.rect(P_hitbox, "red")
-    screen.draw.rect(M_hitbox, "red")
+    #--------------------
+    # exibition of stamin bar           X                                Y                            W         H        COLOR
+    screen.draw.filled_rect(Rect((player.x - player.width / 4, player.y - player.height + 20), (player.stamin/2, 5)), (200, 150, 0))
+    screen.draw.rect(Rect((player.x - player.width / 4, player.y - player.height + 20), (player.max_stamin/2, 5)), (200, 150, 0))
+    #------------------------------
+    
+    # ground line FOR DEBUG
+    screen.draw.rect(Rect((0, ground), (WIDTH, 2)), ('blue'))
