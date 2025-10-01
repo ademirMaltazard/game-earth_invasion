@@ -26,9 +26,14 @@ player.jump_height = 90
 player.jump_force = 10
 player.hitbox = {'desloc_x' : 15, 'desloc_y': 26, 'width': 30, 'height': 55}
 
+# BULLET CONFIGS
+bullets = []
+
 # BOSS CONFIGS
 boss = Actor('boss')
 boss.x = WIDTH/2
+boss.max_life = 500
+boss.life = boss.max_life
 boss.steps = .5
 boss.atack_rate = 500
 boss.clock = 0
@@ -92,6 +97,14 @@ def on_key_down(key):
         player.runing = True
         player.speed = 4
 
+    if (keyboard.up or keyboard.w):
+        bullet = Actor('bullet')
+        bullet.x = player.x + 15
+        bullet.y = player.y - player.height/2
+        bullet.damage = 10
+        bullet.is_fired = True
+        bullets.append(bullet)
+
 
 # when key is released
 def on_key_up(key):
@@ -154,7 +167,17 @@ def update():
     # verify colission player -> missile
     if get_hitbox(player, player.hitbox).colliderect(get_hitbox(missile, missile.hitbox)):
         print('atingido')
-   
+    
+    # set bullet moviment
+    for bullet in bullets:
+        bullet.y -= 3
+
+        if bullet.colliderect(get_hitbox(boss, boss.right_eye)):
+            if bullet.is_fired: boss.life -= 5
+            bullet.is_fired = False
+
+    # remove bullets when getout screen
+    bullets[:] = [b for b in bullets if (b.y > 100 or b.is_fired==False)]
 
     ### BOSS ACTIONS ----------------------------------------
     boss.clock += 1
@@ -221,10 +244,21 @@ def draw():
     screen.draw.rect(get_hitbox(player, player.hitbox), 'blue') # FOR DEBUG
     
     boss.draw()
+    screen.draw.filled_rect(Rect((boss.x - boss.max_life/4, 50), (boss.life / 2, 5)), (200, 0, 0))
+    screen.draw.rect(Rect((boss.x - boss.max_life/4, 50), (boss.max_life/2, 5)), (0, 0, 0))
+    screen.draw.text(str(boss.life), (boss.x - boss.max_life/4, 60), fontsize=40, color="white")
+
     # boss eyes
     screen.draw.rect(get_hitbox(boss, boss.right_eye), 'blue') # FOR DEBUG
     screen.draw.rect(get_hitbox(boss, boss.left_eye), 'blue') # FOR DEBUG
     
+    # bullet
+    if len(bullets) > 0:
+        for bullet in bullets:
+            if bullet.is_fired:
+                bullet.draw()
+                screen.draw.rect(bullet._rect, 'red')
+
     # missile
     if missile.is_fired:
         missile.draw()
