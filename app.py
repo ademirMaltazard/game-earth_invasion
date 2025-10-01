@@ -1,6 +1,5 @@
 from os import environ
 import pgzrun
-import pygame
 from random import randint
 
 WIDTH = 700
@@ -25,9 +24,7 @@ player.is_jumping = False
 player.jump_timer = 0
 player.jump_height = 90
 player.jump_force = 10
-player.hitbox_w = 30
-player.hitbox_h = 60
-player.desloc_y = 25
+player.hitbox = {'desloc_x' : 15, 'desloc_y': 26, 'width': 30, 'height': 55}
 
 # BOSS CONFIGS
 boss = Actor('boss')
@@ -35,6 +32,8 @@ boss.x = WIDTH/2
 boss.steps = .5
 boss.atack_rate = 500
 boss.clock = 0
+boss.right_eye = {'desloc_x' : -30, 'desloc_y': -5, 'width': 40, 'height': 15}
+boss.left_eye = {'desloc_x' : 68, 'desloc_y': -5, 'width': 40, 'height': 15}
 
 # BOSS SHOOT CONFIGS
 missile = Actor('missile_0')
@@ -46,9 +45,7 @@ missile.frame_index = 0
 missile.fps = 0.1
 missile.frame_timer = 40
 missile.is_fired = False
-missile.hitbox_w = 13
-missile.hitbox_h = 18
-missile.desloc_y = -3 #-10
+missile.hitbox = {'desloc_x' : 6.5, 'desloc_y': -3, 'width': 13, 'height': 18}
 
 # EXPLOSION
 explosion = Actor('explosion_0')
@@ -62,11 +59,18 @@ explosion.frame_index = 0
 explosion.frames = ['explosion_0', 'explosion_1', 'explosion_2', 'explosion_3']
 
 # get functions
-def get_hitbox(actor):
+'''def get_hitbox(actor):
     return Rect(
-        actor.x - actor.hitbox_w/2,   # deslocamento horizontal da posição
+        actor.x - actor.desloc_x,   # deslocamento horizontal da posição
         actor.y - actor.desloc_y,                 # deslocamento vertical da posição
         actor.hitbox_w, actor.hitbox_h          # largura e altura da hitbox personalizada
+    )'''
+
+def get_hitbox(actor, hitbox):
+    return Rect(
+        actor.x - hitbox['desloc_x'],   # deslocamento horizontal da posição
+        actor.y - hitbox['desloc_y'],                 # deslocamento vertical da posição
+        hitbox['width'], hitbox['height']         # largura e altura da hitbox personalizada
     )
 
 def get_base(actor):
@@ -148,7 +152,7 @@ def update():
         player.stamin -= 1
 
     # verify colission player -> missile
-    if get_hitbox(player).colliderect(get_hitbox(missile)):
+    if get_hitbox(player, player.hitbox).colliderect(get_hitbox(missile, missile.hitbox)):
         print('atingido')
    
 
@@ -169,7 +173,7 @@ def update():
 
     # MISSILE ACTIONS ----------------------------------------
     # 
-    if get_base(get_hitbox(missile)) >= ground:
+    if get_base(get_hitbox(missile, missile.hitbox)) >= ground:
         explosion.x = missile.x
         explosion.y = missile.y - 15
         explosion.explode = True
@@ -182,16 +186,10 @@ def update():
         missile.y += missile.speed
         if missile.x > player.x:
             missile.x -= 1
-            original = images.missile_0 # pega a imagem original do arquivo
-            girada = pygame.transform.rotate(original, 45)
-
-            # Atualiza a imagem do ator
-            missile._surf = girada
-            missile._update_pos()
         elif missile.x < player.x:
             missile.x += 1
         # avança o contador de tempo
-        #missile.image = animate(missile)
+        missile.image = animate(missile)
 
     # EXPLOSION ACTIONS
     if explosion.explode and explosion.timer > 0:
@@ -220,16 +218,19 @@ def draw():
     bg.draw()
 
     player.draw()
-    P_hitbox = get_hitbox(player)
-    screen.draw.rect(P_hitbox, "red") # FOR DEBUG
+    screen.draw.rect(get_hitbox(player, player.hitbox), 'blue') # FOR DEBUG
     
     boss.draw()
+    # boss eyes
+    screen.draw.rect(get_hitbox(boss, boss.right_eye), 'blue') # FOR DEBUG
+    screen.draw.rect(get_hitbox(boss, boss.left_eye), 'blue') # FOR DEBUG
     
+    # missile
     if missile.is_fired:
         missile.draw()
-        M_hitbox = get_hitbox(missile)
-        screen.draw.rect(M_hitbox, "red") # FOR DEBUG
+        screen.draw.rect(get_hitbox(missile, missile.hitbox), 'blue') # FOR DEBUG
 
+    # explosion
     if explosion.explode:
         explosion.draw()
 
