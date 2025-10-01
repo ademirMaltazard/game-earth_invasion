@@ -26,8 +26,16 @@ player.jump_height = 90
 player.jump_force = 10
 player.hitbox = {'desloc_x' : 15, 'desloc_y': 26, 'width': 30, 'height': 55}
 
-# BULLET CONFIGS
-bullets = []
+# GUN CONFIGS
+gun = Actor('gun')
+gun.x = WIDTH - 80
+gun.y = HEIGHT - 30
+gun.bullets = []
+gun.bullet_timer = 0
+gun.reloading = False
+gun.reload_time = 100
+gun.max_ammo = 30
+gun.ammo = 30
 
 # BOSS CONFIGS
 boss = Actor('boss')
@@ -39,6 +47,8 @@ boss.atack_rate = 500
 boss.clock = 0
 boss.right_eye = {'desloc_x' : -30, 'desloc_y': -5, 'width': 40, 'height': 15}
 boss.left_eye = {'desloc_x' : 68, 'desloc_y': -5, 'width': 40, 'height': 15}
+boss.right_tentacle = {'desloc_x' : -68, 'desloc_y': -30, 'width': 60, 'height': 60}
+boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -30, 'width': 60, 'height': 60}
 
 # BOSS SHOOT CONFIGS
 missile = Actor('missile_0')
@@ -64,12 +74,6 @@ explosion.frame_index = 0
 explosion.frames = ['explosion_0', 'explosion_1', 'explosion_2', 'explosion_3']
 
 # get functions
-'''def get_hitbox(actor):
-    return Rect(
-        actor.x - actor.desloc_x,   # deslocamento horizontal da posição
-        actor.y - actor.desloc_y,                 # deslocamento vertical da posição
-        actor.hitbox_w, actor.hitbox_h          # largura e altura da hitbox personalizada
-    )'''
 
 def get_hitbox(actor, hitbox):
     return Rect(
@@ -97,13 +101,9 @@ def on_key_down(key):
         player.runing = True
         player.speed = 4
 
-    if (keyboard.up or keyboard.w):
-        bullet = Actor('bullet')
-        bullet.x = player.x + 15
-        bullet.y = player.y - player.height/2
-        bullet.damage = 10
-        bullet.is_fired = True
-        bullets.append(bullet)
+
+    if key == keys.R:
+        gun.reloading = True
 
 
 # when key is released
@@ -165,19 +165,64 @@ def update():
         player.stamin -= 1
 
     # verify colission player -> missile
-    if get_hitbox(player, player.hitbox).colliderect(get_hitbox(missile, missile.hitbox)):
+    if get_hitbox(player, player.hitbox).colliderect(get_hitbox(missile, missile.hitbox)) or get_hitbox(player, player.hitbox).colliderect(explosion._rect):
         print('atingido')
+
     
-    # set bullet moviment
-    for bullet in bullets:
+    # acress bullet timer
+    gun.bullet_timer += 1
+
+    # create a new bullet
+    if (keyboard.up or keyboard.w) and gun.bullet_timer > 20 and gun.ammo > 0 and gun.reloading == False:
+        bullet = Actor('bullet')
+        bullet.x = player.x + 15
+        bullet.y = player.y - player.height/2
+        bullet.damage = 5
+        bullet.is_fired = True
+        gun.bullets.append(bullet)
+        gun.bullet_timer = 0
+        gun.ammo -= 1
+
+    # reload ammo
+    if gun.reloading:
+        gun.reload_time -= 1
+        if gun.reload_time <= 0:
+            gun.ammo = gun.max_ammo
+            gun.reload_time = 100
+            gun.reloading = False
+            
+
+    # bullet moviment
+    for bullet in gun.bullets:
         bullet.y -= 3
 
-        if bullet.colliderect(get_hitbox(boss, boss.right_eye)):
-            if bullet.is_fired: boss.life -= 5
+        if bullet.y <= 100:
             bullet.is_fired = False
 
+        # verify collision bullet -> right eye 
+        if bullet.colliderect(get_hitbox(boss, boss.right_eye)):
+            if bullet.is_fired: boss.life -= bullet.damage
+            bullet.is_fired = False
+        
+        # verify collision bullet -> left eye 
+        if bullet.colliderect(get_hitbox(boss, boss.left_eye)):
+            if bullet.is_fired: boss.life -= bullet.damage
+            bullet.is_fired = False
+
+        # verify collision bullet -> right tentacle 
+        if bullet.colliderect(get_hitbox(boss, boss.right_tentacle)):
+            if bullet.is_fired: boss.life -= bullet.damage
+            bullet.is_fired = False
+
+        # verify collision bullet -> left tentacle 
+        if bullet.colliderect(get_hitbox(boss, boss.left_tentacle)):
+            if bullet.is_fired: boss.life -= bullet.damage
+            bullet.is_fired = False
+        
+
+
     # remove bullets when getout screen
-    bullets[:] = [b for b in bullets if (b.y > 100 or b.is_fired==False)]
+    gun.bullets[:] = [b for b in gun.bullets if b.is_fired]
 
     ### BOSS ACTIONS ----------------------------------------
     boss.clock += 1
@@ -221,6 +266,8 @@ def update():
     
     if explosion.timer <= 0:
         explosion.timer = 30
+        explosion.x = -10
+        explosion.y = 30
         explosion.explode = False
 
 """ TEST 
@@ -241,6 +288,11 @@ def draw():
     bg.draw()
 
     player.draw()
+    if gun.reloading:
+        screen.draw.filled_rect(Rect((gun.x - gun.width/2, gun.y - 20), (gun.reload_time/3, 5)), ('gray'))
+    gun.draw()
+    screen.draw.text(str(gun.ammo), (WIDTH - 60, HEIGHT - 40), fontsize=40, color="black")
+
     screen.draw.rect(get_hitbox(player, player.hitbox), 'blue') # FOR DEBUG
     
     boss.draw()
@@ -251,10 +303,13 @@ def draw():
     # boss eyes
     screen.draw.rect(get_hitbox(boss, boss.right_eye), 'blue') # FOR DEBUG
     screen.draw.rect(get_hitbox(boss, boss.left_eye), 'blue') # FOR DEBUG
+    screen.draw.rect(get_hitbox(boss, boss.right_tentacle), 'red') # FOR DEBUG
+    screen.draw.rect(get_hitbox(boss, boss.left_tentacle), 'gray') # FOR DEBUG
+    
     
     # bullet
-    if len(bullets) > 0:
-        for bullet in bullets:
+    if len(gun.bullets) > 0:
+        for bullet in gun.bullets:
             if bullet.is_fired:
                 bullet.draw()
                 screen.draw.rect(bullet._rect, 'red')
