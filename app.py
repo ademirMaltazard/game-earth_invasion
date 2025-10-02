@@ -46,13 +46,18 @@ boss.steps = .5
 boss.actual_step = 0
 boss.missile_atk = False
 boss.r_tentacle_atk = False
+boss.l_tentacle_atk = False
+boss.dual_tentacle_atk = False
+boss.slime_blast_atk = False
 boss.atack_rate = 300
 boss.clock = 0
 boss.tentacle_atk_timer = 0
+boss.body = {'desloc_x' : 100, 'desloc_y': 85, 'width': 200, 'height': 100}
 boss.right_eye = {'desloc_x' : -30, 'desloc_y': -5, 'width': 40, 'height': 15}
 boss.left_eye = {'desloc_x' : 68, 'desloc_y': -5, 'width': 40, 'height': 15}
 boss.right_tentacle = {'desloc_x' : -68, 'desloc_y': -30, 'width': 60, 'height': 60}
 boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -30, 'width': 60, 'height': 60}
+boss.mouth = {'desloc_x' : 20, 'desloc_y': -10, 'width': 40, 'height': 15}
 
 # BOSS SHOOT CONFIGS
 missile = Actor('missile_0')
@@ -213,14 +218,19 @@ def update():
             if bullet.is_fired: boss.life -= bullet.damage
             bullet.is_fired = False
 
+        if bullet.colliderect(get_hitbox(boss, boss.mouth)):
+            if bullet.is_fired: boss.life -= bullet.damage * 2
+            bullet.is_fired = False
+
+        if bullet.colliderect(get_hitbox(boss, boss.body)):
+            bullet.is_fired = False
+        
         # verify collision bullet -> right tentacle 
         if bullet.colliderect(get_hitbox(boss, boss.right_tentacle)):
-            if bullet.is_fired: boss.life -= bullet.damage
             bullet.is_fired = False
 
         # verify collision bullet -> left tentacle 
         if bullet.colliderect(get_hitbox(boss, boss.left_tentacle)):
-            if bullet.is_fired: boss.life -= bullet.damage
             bullet.is_fired = False
         
 
@@ -238,7 +248,7 @@ def update():
     
     # boss atack
     if boss.clock == boss.atack_rate:
-        attack = randint(0,1)
+        attack = randint(0,3)
         boss.actual_steps = boss.steps
 
         if attack == 0:
@@ -247,6 +257,12 @@ def update():
         if attack == 1:
             boss.r_tentacle_atk = True
             print('ataque tentaculo direito')
+        if attack == 2:
+            boss.l_tentacle_atk = True
+            print('ataque tentaculo esquerdo')
+        if attack == 3:
+            boss.dual_tentacle_atk = True
+            print('ataque dos dois tentaculos')
 
 
     # attacking with Missil
@@ -307,6 +323,54 @@ def update():
             boss.steps = boss.actual_steps
             boss.clock = 0
 
+    if boss.l_tentacle_atk:
+        boss.tentacle_atk_timer += 1
+        boss.steps = 0
+        if boss.tentacle_atk_timer < 30:
+            boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -30, 'width': 130, 'height': 80}
+            get_hitbox(boss, boss.left_tentacle)
+        elif boss.tentacle_atk_timer < 70:
+            boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -30, 'width': 60, 'height': 300}
+            get_hitbox(boss, boss.left_tentacle)
+        elif boss.tentacle_atk_timer < 100:
+            boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -30, 'width': 130, 'height': 80}
+            get_hitbox(boss, boss.left_tentacle)
+        else:
+            boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -30, 'width': 60, 'height': 60}
+            get_hitbox(boss, boss.left_tentacle)
+            boss.tentacle_atk_timer = 0
+            boss.l_tentacle_atk = False
+            boss.steps = boss.actual_steps
+            boss.clock = 0
+    
+    if boss.dual_tentacle_atk:
+        boss.tentacle_atk_timer += 1
+        boss.steps = 0
+        if boss.tentacle_atk_timer < 30:
+            boss.right_tentacle = {'desloc_x' : -18, 'desloc_y': -30, 'width': 130, 'height': 80}
+            boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -30, 'width': 130, 'height': 80}
+            get_hitbox(boss, boss.right_tentacle)
+            get_hitbox(boss, boss.left_tentacle)
+        elif boss.tentacle_atk_timer < 70:
+            boss.right_tentacle = {'desloc_x' : -68, 'desloc_y': -30, 'width': 60, 'height': 300}
+            boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -30, 'width': 60, 'height': 300}
+            get_hitbox(boss, boss.right_tentacle)
+            get_hitbox(boss, boss.left_tentacle)
+        elif boss.tentacle_atk_timer < 100:
+            boss.right_tentacle = {'desloc_x' : -18, 'desloc_y': -30, 'width': 130, 'height': 80}
+            boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -30, 'width': 130, 'height': 80}
+            get_hitbox(boss, boss.right_tentacle)
+            get_hitbox(boss, boss.left_tentacle)
+        else:
+            boss.right_tentacle = {'desloc_x' : -68, 'desloc_y': -30, 'width': 60, 'height': 60}
+            boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -30, 'width': 60, 'height': 60}
+            get_hitbox(boss, boss.right_tentacle)
+            get_hitbox(boss, boss.left_tentacle)
+            boss.tentacle_atk_timer = 0
+            boss.dual_tentacle_atk = False
+            boss.steps = boss.actual_steps
+            boss.clock = 0
+
 """ TEST 
     rand = randint(0, 50)
     if rand == 20:
@@ -338,10 +402,12 @@ def draw():
     screen.draw.text(str(boss.life), (boss.x - boss.max_life/4, 60), fontsize=40, color="white")
 
     # boss eyes
+    screen.draw.rect(get_hitbox(boss, boss.body), 'pink') # FOR DEBUG
     screen.draw.rect(get_hitbox(boss, boss.right_eye), 'blue') # FOR DEBUG
     screen.draw.rect(get_hitbox(boss, boss.left_eye), 'blue') # FOR DEBUG
     screen.draw.rect(get_hitbox(boss, boss.right_tentacle), 'red') # FOR DEBUG
     screen.draw.rect(get_hitbox(boss, boss.left_tentacle), 'gray') # FOR DEBUG
+    screen.draw.rect(get_hitbox(boss, boss.mouth), 'green') # FOR DEBUG
     
     
     # bullet
