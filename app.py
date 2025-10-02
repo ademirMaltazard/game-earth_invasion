@@ -43,6 +43,7 @@ boss.x = WIDTH/2
 boss.max_life = 500
 boss.life = boss.max_life
 boss.steps = .5
+boss.actual_step = 0
 boss.missile_atk = False
 boss.r_tentacle_atk = False
 boss.atack_rate = 300
@@ -238,6 +239,7 @@ def update():
     # boss atack
     if boss.clock == boss.atack_rate:
         attack = randint(0,1)
+        boss.actual_steps = boss.steps
 
         if attack == 0:
             boss.missile_atk = True
@@ -302,7 +304,7 @@ def update():
             get_hitbox(boss, boss.right_tentacle)
             boss.tentacle_atk_timer = 0
             boss.r_tentacle_atk = False
-            boss.steps = .5
+            boss.steps = boss.actual_steps
             boss.clock = 0
 
 """ TEST 
