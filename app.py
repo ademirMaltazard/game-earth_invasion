@@ -43,8 +43,11 @@ boss.x = WIDTH/2
 boss.max_life = 500
 boss.life = boss.max_life
 boss.steps = .5
-boss.atack_rate = 500
+boss.missile_atk = False
+boss.r_tentacle_atk = False
+boss.atack_rate = 300
 boss.clock = 0
+boss.tentacle_atk_timer = 0
 boss.right_eye = {'desloc_x' : -30, 'desloc_y': -5, 'width': 40, 'height': 15}
 boss.left_eye = {'desloc_x' : 68, 'desloc_y': -5, 'width': 40, 'height': 15}
 boss.right_tentacle = {'desloc_x' : -68, 'desloc_y': -30, 'width': 60, 'height': 60}
@@ -234,13 +237,26 @@ def update():
     
     # boss atack
     if boss.clock == boss.atack_rate:
+        attack = randint(0,1)
+
+        if attack == 0:
+            boss.missile_atk = True
+            print('ataque missil')
+        if attack == 1:
+            boss.r_tentacle_atk = True
+            print('ataque tentaculo direito')
+
+
+    # attacking with Missil
+    if boss.missile_atk:
         missile.x = boss.x
         missile.y = boss.y
         missile.is_fired = True
         boss.clock = 0
+        boss.missile_atk = False
 
     # MISSILE ACTIONS ----------------------------------------
-    # 
+    # colision MISSILE --> GROUND
     if get_base(get_hitbox(missile, missile.hitbox)) >= ground:
         explosion.x = missile.x
         explosion.y = missile.y - 15
@@ -249,14 +265,13 @@ def update():
         missile.x = 0
         missile.is_fired = False
 
-    # fired
+    # missile moviment
     if missile.is_fired:
         missile.y += missile.speed
         if missile.x > player.x:
             missile.x -= 1
         elif missile.x < player.x:
             missile.x += 1
-        # avança o contador de tempo
         missile.image = animate(missile)
 
     # EXPLOSION ACTIONS
@@ -269,6 +284,26 @@ def update():
         explosion.x = -10
         explosion.y = 30
         explosion.explode = False
+
+    if boss.r_tentacle_atk:
+        boss.tentacle_atk_timer += 1
+        boss.steps = 0
+        if boss.tentacle_atk_timer < 30:
+            boss.right_tentacle = {'desloc_x' : -18, 'desloc_y': -30, 'width': 130, 'height': 80}
+            get_hitbox(boss, boss.right_tentacle)
+        elif boss.tentacle_atk_timer < 70:
+            boss.right_tentacle = {'desloc_x' : -68, 'desloc_y': -30, 'width': 60, 'height': 300}
+            get_hitbox(boss, boss.right_tentacle)
+        elif boss.tentacle_atk_timer < 100:
+            boss.right_tentacle = {'desloc_x' : -18, 'desloc_y': -30, 'width': 130, 'height': 80}
+            get_hitbox(boss, boss.right_tentacle)
+        else:
+            boss.right_tentacle = {'desloc_x' : -68, 'desloc_y': -30, 'width': 60, 'height': 60}
+            get_hitbox(boss, boss.right_tentacle)
+            boss.tentacle_atk_timer = 0
+            boss.r_tentacle_atk = False
+            boss.steps = .5
+            boss.clock = 0
 
 """ TEST 
     rand = randint(0, 50)
