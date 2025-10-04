@@ -13,10 +13,10 @@ gravity = 5
 ground = HEIGHT - 16
 
 # PLAYER CONFIGS
-player = Actor('player_idle')
+player = Actor('player_idle_0')
 player.x = WIDTH/2
 player.y = HEIGHT - player.height * 2
-player.runing = False
+player.running = False
 player.speed = 2
 player.max_stamin = 50
 player.stamin = 0
@@ -25,6 +25,10 @@ player.jump_timer = 0
 player.jump_height = 90
 player.jump_force = 10
 player.hitbox = {'desloc_x' : 15, 'desloc_y': 26, 'width': 30, 'height': 55}
+player.frames = ['player_idle_0', 'player_idle_1', 'player_idle_2', 'player_idle_1']
+player.frame_index = 0
+player.fps = 0.1
+player.frame_timer = 40
 
 # GUN CONFIGS
 gun = Actor('gun')
@@ -49,7 +53,7 @@ boss.r_tentacle_atk = False
 boss.l_tentacle_atk = False
 boss.dual_tentacle_atk = False
 boss.slime_blast_atk = False
-boss.atack_rate = 300
+boss.atack_rate = 350
 boss.clock = 0
 boss.tentacle_atk_timer = 0
 boss.body = {'desloc_x' : 100, 'desloc_y': 85, 'width': 200, 'height': 100}
@@ -64,12 +68,12 @@ missile = Actor('missile_0')
 missile.x = 0
 missile.y = boss.y
 missile.speed = 1
+missile.is_fired = False
+missile.hitbox = {'desloc_x' : 6.5, 'desloc_y': -3, 'width': 13, 'height': 18}
 missile.frames = ['missile_0', 'missile_1', 'missile_2', 'missile_1',]
 missile.frame_index = 0
 missile.fps = 0.1
 missile.frame_timer = 40
-missile.is_fired = False
-missile.hitbox = {'desloc_x' : 6.5, 'desloc_y': -3, 'width': 13, 'height': 18}
 
 # EXPLOSION
 explosion = Actor('explosion_0')
@@ -80,7 +84,7 @@ explosion.timer = 40
 explosion.frame_timer = 20
 explosion.fps = 0.1
 explosion.frame_index = 0
-explosion.frames = ['explosion_0', 'explosion_1', 'explosion_2', 'explosion_3']
+explosion.frames = ['explosion_0', 'explosion_0', 'explosion_1', 'explosion_2', 'explosion_3', 'explosion_4', 'explosion_5', 'explosion_6']
 
 # get functions
 
@@ -106,10 +110,9 @@ def animate(actor):
 
 # when key is pressed
 def on_key_down(key):
-    if key == keys.LSHIFT and player.stamin == player.max_stamin and (player.runing == False) and (keyboard.left  or keyboard.a or keyboard.right or keyboard.d):
-        player.runing = True
+    if key == keys.LSHIFT and player.stamin == player.max_stamin and (player.running == False) and (keyboard.left  or keyboard.a or keyboard.right or keyboard.d):
+        player.running = True
         player.speed = 4
-
 
     if key == keys.R:
         gun.reloading = True
@@ -119,7 +122,7 @@ def on_key_down(key):
 def on_key_up(key):
     if key == keys.LSHIFT:
         player.speed = 2
-        player.runing = False
+        player.running = False
 
 
 def update():
@@ -132,9 +135,13 @@ def update():
     # gravity actions
     if get_base(player) < ground:
         player.y += gravity
+
+    if get_base(player) == ground:
+        player.image = animate(player)
     
     # set player in ground
     if get_base(player) > ground:
+        print('down: ', (player.y + player.height / 2), '---', player.y, '---', player.height)
         player.y = ground - player.height / 2
 
     ### PLAYER ACTIONS ----------------------------------------
@@ -146,7 +153,7 @@ def update():
  
     # check conditions for jump
     if keyboard.space:
-        if get_base(player) == ground and player.jump_timer > 20:
+        if get_base(player) == ground and player.jump_timer > 20 and player.stamin > player.max_stamin / 2:
             player.is_jumping = True
             player.stamin -= player.max_stamin / 2
         if player.is_jumping:
@@ -161,16 +168,16 @@ def update():
         player.jump_timer = 0
 
     # charge stamin
-    if player.stamin < player.max_stamin and (player.runing == False):
+    if player.stamin < player.max_stamin and (player.running == False):
         player.stamin += 0.5
 
     # stop player run
     if player.stamin <= 0 and on_key_up(keys.LSHIFT):
-        player.runing = False
+        player.running = False
         player.speed = 2
 
-    # decrease stamina when runing
-    if player.runing:
+    # decrease stamina when running
+    if player.running:
         player.stamin -= 1
 
     # verify colission player -> missile
@@ -248,7 +255,7 @@ def update():
     
     # boss atack
     if boss.clock == boss.atack_rate:
-        attack = randint(0,3)
+        attack = 0 #randint(0,3)
         boss.actual_steps = boss.steps
 
         if attack == 0:
