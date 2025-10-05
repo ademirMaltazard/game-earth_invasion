@@ -25,10 +25,7 @@ player.jump_timer = 0
 player.jump_height = 90
 player.jump_force = 10
 player.hitbox = {'desloc_x' : 15, 'desloc_y': 26, 'width': 30, 'height': 55}
-player.frames = ['player_idle_0', 'player_idle_1', 'player_idle_2', 'player_idle_1']
-player.frame_index = 0
-player.fps = 0.1
-player.frame_timer = 40
+player.anim_idle = {'play': True,'repeat': True, 'index': -1, 'fps': 1, 'timer': 0, 'frames': ['player_idle_0', 'player_idle_1', 'player_idle_2', 'player_idle_1']}
 
 # GUN CONFIGS
 gun = Actor('gun')
@@ -70,10 +67,7 @@ missile.y = boss.y
 missile.speed = 1
 missile.is_fired = False
 missile.hitbox = {'desloc_x' : 6.5, 'desloc_y': -3, 'width': 13, 'height': 18}
-missile.frames = ['missile_0', 'missile_1', 'missile_2', 'missile_1',]
-missile.frame_index = 0
-missile.fps = 0.1
-missile.frame_timer = 40
+missile.anim = {'play': True, 'repeat': True, 'index': 0, 'fps': 1, 'timer': 0, 'frames': ['missile_0', 'missile_1', 'missile_2', 'missile_1']}
 
 # EXPLOSION
 explosion = Actor('explosion_0')
@@ -81,10 +75,7 @@ explosion.x = 0
 explosion.y = 0
 explosion.explode = False
 explosion.timer = 40
-explosion.frame_timer = 20
-explosion.fps = 0.1
-explosion.frame_index = 0
-explosion.frames = ['explosion_0', 'explosion_0', 'explosion_1', 'explosion_2', 'explosion_3', 'explosion_4', 'explosion_5', 'explosion_6']
+explosion.anim = {'play': True, 'repeat': False, 'index': -1, 'fps': 2, 'timer': 0, 'frames': ['explosion_0', 'explosion_1', 'explosion_2', 'explosion_3', 'explosion_4', 'explosion_5', 'explosion_6','explosion_7', 'explosion_8', 'explosion_9', 'explosion_10']}
 
 # get functions
 
@@ -98,16 +89,22 @@ def get_hitbox(actor, hitbox):
 def get_base(actor):
     return actor.y + actor.height / 2
 
-# execute animation
-def animate(actor):
-    actor.frame_timer += actor.fps
-    if actor.frame_timer >= 1:
-        actor.frame_timer = 0
-        actor.frame_index = (actor.frame_index + 1) % len(actor.frames)
-        return actor.frames[actor.frame_index]
-    else:
-        return actor.frames[actor.frame_index]
 
+# execute animation
+def animate(anim):
+    if anim['play'] == True:
+        anim['timer'] += anim['fps']
+        if anim['timer'] % 10 == 0:
+            anim['timer'] = 0
+            anim['index'] = (anim['index'] + 1) % len(anim['frames'])
+            if anim['index'] == len(anim['frames']) - 1 and anim['repeat'] == False:
+                anim['play'] = False
+            return anim['frames'][anim['index']]
+        else: 
+            return anim['frames'][anim['index']]
+    else:
+        return anim['frames'][0]
+    
 # when key is pressed
 def on_key_down(key):
     if key == keys.LSHIFT and player.stamin == player.max_stamin and (player.running == False) and (keyboard.left  or keyboard.a or keyboard.right or keyboard.d):
@@ -137,7 +134,7 @@ def update():
         player.y += gravity
 
     if get_base(player) == ground:
-        player.image = animate(player)
+        player.image = animate(player.anim_idle)
     
     # set player in ground
     if get_base(player) > ground:
@@ -255,7 +252,7 @@ def update():
     
     # boss atack
     if boss.clock == boss.atack_rate:
-        attack = 0 #randint(0,3)
+        attack = randint(0,3)
         boss.actual_steps = boss.steps
 
         if attack == 0:
@@ -272,6 +269,7 @@ def update():
             print('ataque dos dois tentaculos')
 
 
+    # MISSILE ACTIONS ----------------------------------------
     # attacking with Missil
     if boss.missile_atk:
         missile.x = boss.x
@@ -280,12 +278,12 @@ def update():
         boss.clock = 0
         boss.missile_atk = False
 
-    # MISSILE ACTIONS ----------------------------------------
     # colision MISSILE --> GROUND
     if get_base(get_hitbox(missile, missile.hitbox)) >= ground:
         explosion.x = missile.x
-        explosion.y = missile.y - 15
+        explosion.y = ground - explosion.height / 2
         explosion.explode = True
+        explosion.anim['play'] = True
         missile.y = -20
         missile.x = 0
         missile.is_fired = False
@@ -297,19 +295,20 @@ def update():
             missile.x -= 1
         elif missile.x < player.x:
             missile.x += 1
-        missile.image = animate(missile)
+        missile.image = animate(missile.anim)
 
-    # EXPLOSION ACTIONS
-    if explosion.explode and explosion.timer > 0:
-        explosion.timer -= 1
-        explosion.image = animate(explosion)
+    # EXPLOSION ACTIONS ------------------------------------------------------
+    if explosion.explode and explosion.anim['play']:
+        # keep the base of image on ground, regardless of the size of the image
+        explosion.y = ground - explosion.height / 2
+        explosion.image = animate(explosion.anim)
     
-    if explosion.timer <= 0:
-        explosion.timer = 30
-        explosion.x = -10
-        explosion.y = 30
+    if explosion.anim['play'] == False:
+        explosion.x = 0
+        explosion.y = -50
         explosion.explode = False
 
+    # TENTACLE ACTIONS ----------------------------------------
     if boss.r_tentacle_atk:
         boss.tentacle_atk_timer += 1
         boss.steps = 0
@@ -403,12 +402,12 @@ def draw():
 
     screen.draw.rect(get_hitbox(player, player.hitbox), 'blue') # FOR DEBUG
     
+    # boss
     boss.draw()
     screen.draw.filled_rect(Rect((boss.x - boss.max_life/4, 50), (boss.life / 2, 5)), (200, 0, 0))
     screen.draw.rect(Rect((boss.x - boss.max_life/4, 50), (boss.max_life/2, 5)), (0, 0, 0))
     screen.draw.text(str(boss.life), (boss.x - boss.max_life/4, 60), fontsize=40, color="white")
 
-    # boss eyes
     screen.draw.rect(get_hitbox(boss, boss.body), 'pink') # FOR DEBUG
     screen.draw.rect(get_hitbox(boss, boss.right_eye), 'blue') # FOR DEBUG
     screen.draw.rect(get_hitbox(boss, boss.left_eye), 'blue') # FOR DEBUG
