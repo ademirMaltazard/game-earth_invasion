@@ -20,6 +20,7 @@ player.running = False
 player.speed = 2
 player.max_stamin = 50
 player.stamin = 0
+player.is_firing = False
 player.is_jumping = False
 player.jump_timer = 0
 player.jump_height = 90
@@ -27,7 +28,9 @@ player.jump_force = 10
 player.hitbox = {'desloc_x' : 15, 'desloc_y': 26, 'width': 30, 'height': 55}
 player.anim_idle = {'play': True,'repeat': True, 'index': -1, 'fps': 1, 'timer': 0, 'frames': ['player_idle_0', 'player_idle_1', 'player_idle_2', 'player_idle_1']}
 player.anim_r_walk = {'play': True,'repeat': True, 'index': -1, 'fps': 1, 'timer': 0, 'frames': ['r_walk_0', 'r_walk_1', 'r_walk_2', 'r_walk_3', 'r_walk_4', 'r_walk_5', 'r_walk_6', 'r_walk_7']}
+player.anim_r_firing = {'play': True,'repeat': True, 'index': -1, 'fps': 1, 'timer': 0, 'frames': ['r_firing_0', 'r_firing_1', 'r_firing_2', 'r_firing_3', 'r_firing_4', 'r_firing_5', 'r_firing_6', 'r_firing_7']}
 player.anim_l_walk = {'play': True,'repeat': True, 'index': -1, 'fps': 1, 'timer': 0, 'frames': ['l_walk_0', 'l_walk_1', 'l_walk_2', 'l_walk_3', 'l_walk_4', 'l_walk_5', 'l_walk_6', 'l_walk_7']}
+player.anim_l_firing = {'play': True,'repeat': True, 'index': -1, 'fps': 1, 'timer': 0, 'frames': ['l_firing_0', 'l_firing_1', 'l_firing_2', 'l_firing_3', 'l_firing_4', 'l_firing_5', 'l_firing_6', 'l_firing_7']}
 
 # GUN CONFIGS
 gun = Actor('gun')
@@ -129,6 +132,18 @@ def on_key_up(key):
     if keyboard.right or keyboard.d:
         player.anim_r_walk['repeat'] = False
 
+def on_mouse_down(button):
+    if button == 1:
+        print('disparo', player.is_firing)
+        player.is_firing = True
+        print('disparo', player.is_firing)
+
+def on_mouse_up(button):
+    if button == 1:
+        print('paro', player.is_firing)
+        player.is_firing = False
+        print('paro', player.is_firing)
+
 
 def update():
     if keyboard.escape:
@@ -159,6 +174,13 @@ def update():
         player.anim_l_walk['repeat'] = True
         player.image = animate(player.anim_l_walk)
         player.x -= player.speed
+
+    # aim
+    if keyboard.w or keyboard.up:
+        if keyboard.left or keyboard.a:
+            player.image = animate(player.anim_l_firing)
+        elif keyboard.right or keyboard.d:
+            player.image = animate(player.anim_r_firing)
  
     # check conditions for jump
     if keyboard.space:
@@ -198,9 +220,13 @@ def update():
     gun.bullet_timer += 1
 
     # create a new bullet
-    if (keyboard.up or keyboard.w) and gun.bullet_timer > 20 and gun.ammo > 0 and gun.reloading == False:
+    if player.is_firing and gun.bullet_timer > 20 and gun.ammo > 0 and gun.reloading == False:
+        print('bala')
         bullet = Actor('bullet')
-        bullet.x = player.x + 15
+        if keyboard.left or keyboard.a:
+            bullet.x = player.x + 15
+        elif keyboard.right or keyboard.d:
+            bullet.x = player.x - 15
         bullet.y = player.y - player.height/2
         bullet.damage = 5
         bullet.is_fired = True
@@ -394,11 +420,6 @@ def update():
     if rand == 20:
         missile.x = randint(50, 450)
         print('atacou')
-
-def on_mouse_down(pos, button):
-    missile.x = boss.x
-    print("Mouse button", button, "clicked at", pos)
-    print(missile._rect)
 """
 
 
