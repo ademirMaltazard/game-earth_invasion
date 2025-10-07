@@ -26,6 +26,8 @@ player.jump_height = 90
 player.jump_force = 10
 player.hitbox = {'desloc_x' : 15, 'desloc_y': 26, 'width': 30, 'height': 55}
 player.anim_idle = {'play': True,'repeat': True, 'index': -1, 'fps': 1, 'timer': 0, 'frames': ['player_idle_0', 'player_idle_1', 'player_idle_2', 'player_idle_1']}
+player.anim_r_walk = {'play': True,'repeat': True, 'index': -1, 'fps': 1, 'timer': 0, 'frames': ['r_walk_0', 'r_walk_1', 'r_walk_2', 'r_walk_3', 'r_walk_4', 'r_walk_5', 'r_walk_6', 'r_walk_7']}
+player.anim_l_walk = {'play': True,'repeat': True, 'index': -1, 'fps': 1, 'timer': 0, 'frames': ['l_walk_0', 'l_walk_1', 'l_walk_2', 'l_walk_3', 'l_walk_4', 'l_walk_5', 'l_walk_6', 'l_walk_7']}
 
 # GUN CONFIGS
 gun = Actor('gun')
@@ -120,6 +122,12 @@ def on_key_up(key):
     if key == keys.LSHIFT:
         player.speed = 2
         player.running = False
+    
+    if keyboard.left or keyboard.a:
+        player.anim_l_walk['repeat'] = False
+
+    if keyboard.right or keyboard.d:
+        player.anim_r_walk['repeat'] = False
 
 
 def update():
@@ -144,8 +152,12 @@ def update():
     ### PLAYER ACTIONS ----------------------------------------
     # left and right
     if (keyboard.right or keyboard.d) and player.x < WIDTH - 25:
+        player.anim_r_walk['repeat'] = True
+        player.image = animate(player.anim_r_walk)
         player.x += player.speed
     if (keyboard.left  or keyboard.a) and player.x > 25:
+        player.anim_l_walk['repeat'] = True
+        player.image = animate(player.anim_l_walk)
         player.x -= player.speed
  
     # check conditions for jump
