@@ -12,15 +12,25 @@ bg = Actor('background')
 gravity = 5
 ground = HEIGHT - 16
 cutscene = False
+menu = False
+pause_mode = False
+game_over = False
+game_over_time = 100
 
 # PLAYER CONFIGS
 player = Actor('player_r_idle_0')
 player.x = 50
 player.y = HEIGHT - player.height * 2
+player.max_life = 5
+player.life = player.max_life
+player.current_life = []
+player.invencible_timer = 200
+player.is_invencible = False
+player.is_damaged = False
 player.running = False
 player.speed = 2
 player.max_stamin = 50
-player.stamin = 0
+player.stamin = player.max_stamin
 player.is_firing = False
 player.is_jumping = False
 player.jump_timer = 0
@@ -93,7 +103,6 @@ explosion.explode = False
 explosion.timer = 40
 explosion.anim = {'play': True, 'repeat': False, 'index': -1, 'change': 3, 'timer': 0, 'frames': ['explosion_0', 'explosion_1', 'explosion_2', 'explosion_3', 'explosion_4', 'explosion_5', 'explosion_6','explosion_7', 'explosion_8', 'explosion_9', 'explosion_10']}
 
-
 # execute animation
 def animate(anim):
     if anim['play'] == True:
@@ -113,9 +122,9 @@ def animate(anim):
 
 def get_hitbox(actor, hitbox):
     return Rect(
-        actor.x - hitbox['desloc_x'],   # deslocamento horizontal da posição
+        actor.x - hitbox['desloc_x'],                 # deslocamento horizontal da posição
         actor.y - hitbox['desloc_y'],                 # deslocamento vertical da posição
-        hitbox['width'], hitbox['height']         # largura e altura da hitbox personalizada
+        hitbox['width'], hitbox['height']             # largura e altura da hitbox personalizada
     )
 
 def get_base(actor):
@@ -127,8 +136,28 @@ def get_idle():
     elif player.direction == 'right':
         return animate(player.anim_r_idle)
 
+def get_player_life(player):
+    for i in range(player.max_life):
+        i += 1
+        life_point = Actor('life_1')
+        life_point.x = 20 * i 
+        life_point.y = 20
+        life_point.hit = False
+        life_point.anim = {'play': True, 'repeat': False, 'index': 1, 'change': 10, 'timer': 0, 'frames': ['life_0', 'life_1', 'life_2', 'life_3', 'life_4']}
+        player.current_life.append(life_point)
+
+def damaged():
+        for life_point in reversed(player.current_life):
+            if life_point.hit == False:
+                life_point.hit = True
+                player.life -= 1
+                player.is_invencible = True
+                break           
+
 # when key is pressed
 def on_key_down(key):
+    global pause_mode
+
     if (cutscene == False):
         if key == keys.LSHIFT and player.stamin == player.max_stamin and (player.running == False) and (keyboard.left  or keyboard.a or keyboard.right or keyboard.d):
             player.running = True
@@ -141,6 +170,10 @@ def on_key_down(key):
         # 13 = ENTER BUTTON for fire
         if key == 13 and keyboard.w:
             player.is_firing = True
+        
+        if key == keys.ESCAPE:
+            pause_mode = not pause_mode
+            ### TO DO MENU OPTIONS ###
 
 
 # when key is released
@@ -153,14 +186,16 @@ def on_key_up(key):
     if key == 13:
         player.is_firing = False
 
+get_player_life(player)
 
 def update():
-    global cutscene
+    global cutscene, game_over, game_over_time, pause_mode
 
-    if keyboard.escape:
-        # menu options
-        ### TO DO ###
-        exit()
+    if game_over:
+        return
+
+    if pause_mode:
+        return 
 
     ### WORLD ACTIONS ----------------------------------------
     # gravity actions
@@ -206,7 +241,7 @@ def update():
         if keyboard.space:
             if get_base(player) == ground and player.jump_timer > 20 and player.stamin > player.max_stamin / 2:
                 player.is_jumping = True
-                player.stamin -= player.max_stamin / 3
+                player.stamin -= int(player.max_stamin / 3)
             if player.is_jumping:
                 player.y -= player.jump_force
 
@@ -217,6 +252,7 @@ def update():
     # change jump variable when reach max height
     if (get_base(player) <= ground - player.jump_height):
         player.is_jumping = False
+        player.is_damaged = False
         player.jump_timer = 0
 
     # charge stamin
@@ -232,9 +268,53 @@ def update():
     if player.running:
         player.stamin -= 1
 
+    if player.is_damaged:
+        player.y -= player.jump_force
+        if player.direction == 'left':
+            player.x += 10
+        if player.direction == 'right':
+            player.x -= 10
+
+    if player.is_invencible:
+        print(player.invencible_timer)
+
+        player.invencible_timer -= 1
+        if player.invencible_timer == 0:
+            print('pode morrer')
+            player.is_invencible = False
+            player.invencible_timer = 200
+
+
+    for life_point in player.current_life:
+        if life_point.hit:
+            life_point.image = animate(life_point.anim)
+
+    if player.life == 0:
+        game_over_time -= 1
+        if game_over_time == 0:
+            game_over = True
+
+
     # verify colission player -> missile
     if get_hitbox(player, player.hitbox).colliderect(get_hitbox(missile, missile.hitbox)) or get_hitbox(player, player.hitbox).colliderect(explosion._rect):
-        print('atingido')
+        if player.is_invencible == False:
+            damaged()
+            explosion.x = missile.x
+            explosion.y = missile.x
+            explosion.explode = True
+            explosion.anim['play'] = True
+            missile.y = -20
+            missile.x = 0
+            missile.is_fired = False
+            player.is_damaged = True
+    
+    if get_hitbox(player, player.hitbox).colliderect(get_hitbox(boss, boss.left_tentacle)) or get_hitbox(player, player.hitbox).colliderect(get_hitbox(boss, boss.right_tentacle)):
+        if player.is_invencible == False:
+            damaged()
+            player.is_damaged =True
+
+
+
 
     
     # acress bullet timer
@@ -242,7 +322,6 @@ def update():
 
     # create a new bullet
     if player.is_firing and gun.bullet_timer > 20 and gun.ammo > 0 and gun.reloading == False and (cutscene == False):
-        print('bala')
         bullet = Actor('bullet')
         fire.active = True
         fire.anim['play'] = True
@@ -262,12 +341,10 @@ def update():
 
     if fire.active:
         fire.image = animate(fire.anim)
-        print(fire.image)
         if fire.anim['play'] == False:
             fire.active = False
             fire.anim['index'] = 0
             fire.y = -60
-            print('end')
 
     # reload ammo
     if gun.reloading:
@@ -296,7 +373,7 @@ def update():
             bullet.is_fired = False
 
         if bullet.colliderect(get_hitbox(boss, boss.mouth)):
-            if bullet.is_fired: boss.life -= bullet.damage * 2
+            if boss.acid_atk == 4 and bullet.is_fired: boss.life -= bullet.damage * 2
             bullet.is_fired = False
 
         if bullet.colliderect(get_hitbox(boss, boss.body)):
@@ -398,12 +475,14 @@ def update():
             boss.atk_timer += 1
             boss.steps = 0
             if boss.atk_timer < 30:
-                boss.right_tentacle = {'desloc_x' : -18, 'desloc_y': -30, 'width': 130, 'height': 80}
+                boss.right_tentacle = {'desloc_x' : -18, 'desloc_y': -30, 'width': 130, 'height': 80} #for defense
+                boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -30, 'width': 130, 'height': 80}
                 get_hitbox(boss, boss.right_tentacle)
             elif boss.atk_timer < 70:
                 boss.right_tentacle = {'desloc_x' : -68, 'desloc_y': -30, 'width': 60, 'height': 300}
                 get_hitbox(boss, boss.right_tentacle)
             elif boss.atk_timer < 100:
+                boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -30, 'width': 60, 'height': 60} #normal state
                 boss.right_tentacle = {'desloc_x' : -18, 'desloc_y': -30, 'width': 130, 'height': 80}
                 get_hitbox(boss, boss.right_tentacle)
             else:
@@ -418,12 +497,14 @@ def update():
             boss.atk_timer += 1
             boss.steps = 0
             if boss.atk_timer < 30:
+                boss.right_tentacle = {'desloc_x' : -18, 'desloc_y': -30, 'width': 130, 'height': 80} #for defense
                 boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -30, 'width': 130, 'height': 80}
                 get_hitbox(boss, boss.left_tentacle)
             elif boss.atk_timer < 70:
                 boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -30, 'width': 60, 'height': 300}
                 get_hitbox(boss, boss.left_tentacle)
             elif boss.atk_timer < 100:
+                boss.right_tentacle = {'desloc_x' : -68, 'desloc_y': -30, 'width': 60, 'height': 60} #normal state
                 boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -30, 'width': 130, 'height': 80}
                 get_hitbox(boss, boss.left_tentacle)
             else:
@@ -462,22 +543,27 @@ def update():
                 boss.atk_timer = 0
                 boss.clock = 0
         
+        # on development
         if boss.acid_atk:
             boss.atk_timer += 1
             boss.steps = 0
             if boss.atk_timer < 30:
-                boss.acid = {'desloc_x' : 20, 'desloc_y': -10, 'width': 40, 'height': 350}
+                boss.acid = {'desloc_x' : 15, 'desloc_y': -10, 'width': 30, 'height': 70}
+                get_hitbox(boss, boss.acid)
+            elif boss.atk_timer < 70:
+                boss.acid = {'desloc_x' : 15, 'desloc_y': -10, 'width': 30, 'height': 150}
                 get_hitbox(boss, boss.acid)
             elif boss.atk_timer < 100:
-                boss.acid = {'desloc_x' : 20, 'desloc_y': -10, 'width': 40, 'height': 15}
+                boss.acid = {'desloc_x' : 15, 'desloc_y': -10, 'width': 30, 'height': 330}
                 get_hitbox(boss, boss.acid)
             else:
-                boss.acid = {'desloc_x' : 20, 'desloc_y': -10, 'width': 40, 'height': 15}
+                boss.acid = {'desloc_x' : 15, 'desloc_y': -10, 'width': 30, 'height': 15}
                 get_hitbox(boss, boss.acid)
                 boss.acid_atk = False
                 boss.steps = boss.actual_steps
                 boss.atk_timer = 0
                 boss.clock = 0
+
 
 """ TEST 
     rand = randint(0, 50)
@@ -489,54 +575,94 @@ def update():
 
 ### DRAW SPRITES ----------------------------------------
 def draw():
-    bg.draw()
+    if menu:
+        screen.clear()
 
-    player.draw()
-    if gun.reloading:
-        screen.draw.filled_rect(Rect((gun.x - gun.width/2, gun.y - 20), (gun.reload_time/3, 5)), ('gray'))
-    gun.draw()
-    screen.draw.text(str(gun.ammo), (WIDTH - 60, HEIGHT - 40), fontsize=40, color="black")
+        screen.draw.filled_rect(Rect((0, 0), (WIDTH, HEIGHT)), (100, 100, 100))
+        screen.draw.filled_rect(Rect((0, 140), (WIDTH, 10)), (200, 0, 0))
+        screen.draw.text('EARTH INVASION', (WIDTH * 0.25 + 2, 162), fontsize=60, color="gray")
+        screen.draw.text('EARTH INVASION', (WIDTH * 0.25, 160), fontsize=60, color="black")
+        screen.draw.filled_rect(Rect((0, 210), (WIDTH, 10)), (200, 0, 0))
 
-    # exibition of stamin bar           X                                Y                            W         H        COLOR
-    screen.draw.filled_rect(Rect((player.x - player.width / 4, player.y - player.height + 20), (player.stamin/2, 5)), (200, 150, 0))
-    screen.draw.rect(Rect((player.x - player.width / 4, player.y - player.height + 20), (player.max_stamin/2, 5)), (200, 150, 0))
-    #------------------------------
-    
-    screen.draw.rect(get_hitbox(player, player.hitbox), 'blue') # FOR DEBUG
-    
-    # boss
-    boss.draw()
-    if boss.alive:
-        screen.draw.filled_rect(Rect((440, 20), (boss.life / 2, 10)), (200, 0, 0))
-        screen.draw.rect(Rect((440, 20), (boss.max_life/2, 10)), (0, 0, 0))
-        screen.draw.text(str(boss.life), (668, 33), fontsize=20, color="white")
 
-        screen.draw.rect(get_hitbox(boss, boss.body), 'pink') # FOR DEBUG
-        screen.draw.rect(get_hitbox(boss, boss.right_eye), 'blue') # FOR DEBUG
-        screen.draw.rect(get_hitbox(boss, boss.left_eye), 'blue') # FOR DEBUG
-        screen.draw.rect(get_hitbox(boss, boss.right_tentacle), 'red') # FOR DEBUG
-        screen.draw.rect(get_hitbox(boss, boss.left_tentacle), 'gray') # FOR DEBUG
-        screen.draw.rect(get_hitbox(boss, boss.mouth), 'green') # FOR DEBUG
-        screen.draw.rect(get_hitbox(boss, boss.acid), 'green') # FOR DEBUG
-    
-    
-    # bullet
-    if len(gun.bullets) > 0:
-        for bullet in gun.bullets:
-            if bullet.is_fired:
-                bullet.draw()
-                fire.draw()
-                screen.draw.rect(bullet._rect, 'red')
+    if not game_over and not menu:
+        bg.draw()
 
-    # missile
-    if missile.is_fired:
-        missile.draw()
-        screen.draw.rect(get_hitbox(missile, missile.hitbox), 'blue') # FOR DEBUG
+        player.draw()
+        screen.draw.rect(get_hitbox(player, player.hitbox), 'blue') # FOR DEBUG
+        
+        # boss
+        boss.draw()
+        if boss.alive:
+            # boss life bar
+            screen.draw.filled_rect(Rect((440, 20), (boss.life / 2, 10)), (200, 0, 0))
+            screen.draw.rect(Rect((440, 20), (boss.max_life/2, 10)), (0, 0, 0))
+            screen.draw.text(str(boss.life), (668, 33), fontsize=20, color="white")
 
-    # explosion
-    if explosion.explode:
-        explosion.draw()
+            screen.draw.rect(get_hitbox(boss, boss.body), 'pink') # FOR DEBUG
+            screen.draw.rect(get_hitbox(boss, boss.right_eye), 'blue') # FOR DEBUG
+            screen.draw.rect(get_hitbox(boss, boss.left_eye), 'blue') # FOR DEBUG
+            screen.draw.rect(get_hitbox(boss, boss.right_tentacle), 'red') # FOR DEBUG
+            screen.draw.rect(get_hitbox(boss, boss.left_tentacle), 'gray') # FOR DEBUG
+            screen.draw.rect(get_hitbox(boss, boss.mouth), 'green') # FOR DEBUG
+            screen.draw.rect(get_hitbox(boss, boss.acid), 'green') # FOR DEBUG
+        
+        
+        # bullet
+        if len(gun.bullets) > 0:
+            for bullet in gun.bullets:
+                if bullet.is_fired:
+                    bullet.draw()
+                    fire.draw()
+                    screen.draw.rect(bullet._rect, 'red') # FOR DEBUG
 
-    #--------------------
-    # ground line FOR DEBUG
-    screen.draw.rect(Rect((0, ground), (WIDTH, 2)), ('blue'))
+        # missile
+        if missile.is_fired:
+            missile.draw()
+            screen.draw.rect(get_hitbox(missile, missile.hitbox), 'blue') # FOR DEBUG
+
+        # explosion
+        if explosion.explode:
+            explosion.draw()
+
+        #--------------------
+        # ground line 
+        screen.draw.rect(Rect((0, ground), (WIDTH, 2)), ('blue')) # FOR DEBUG
+
+        # SCREEN HUD
+        for life_point in player.current_life:
+            life_point.draw()
+        
+        # screen.draw.text(str(player.life), (60, 40), fontsize=40, color="red")
+
+        # reload time bar 
+        if gun.reloading:
+            screen.draw.filled_rect(Rect((gun.x - gun.width/2, gun.y - 20), (gun.reload_time/3, 5)), ('gray'))
+
+        # gun icon
+        gun.draw()
+        
+        # exibition of ammo value 
+        screen.draw.text(str(gun.ammo), (WIDTH - 60, HEIGHT - 40), fontsize=40, color="black")
+        #screen.draw.text(str(player.life), (0,0), fontsize=60, color="gray")
+
+        # exibition of stamin bar           X                                Y                            W         H        COLOR
+        screen.draw.filled_rect(Rect((player.x - player.width / 4, player.y - player.height + 20), (player.stamin/2, 5)), (200, 150, 0))
+        screen.draw.rect(Rect((player.x - player.width / 4, player.y - player.height + 20), (player.max_stamin/2, 5)), (200, 150, 0))
+        
+        
+
+    # GAME OVER SCREEN
+    if game_over:
+        screen.clear()
+
+        screen.draw.filled_rect(Rect((0, 0), (WIDTH, HEIGHT)), (100, 100, 100))
+        screen.draw.filled_rect(Rect((0, 160), (WIDTH, 10)), (200, 0, 0))
+        screen.draw.text('GAME OVER', (WIDTH * 0.32 + 2, 232), fontsize=60, color="gray")
+        screen.draw.text('GAME OVER', (WIDTH * 0.32, 230), fontsize=60, color="black")
+        screen.draw.filled_rect(Rect((0, 320), (WIDTH, 10)), (200, 0, 0))
+
+#        screen.draw.text('press ENTER to reset', (WIDTH * 0.2 + 1, 350), fontsize=20, color= 'red')
+        screen.draw.text('press ENTER to menu', (WIDTH * 0.2, 350), fontsize=25, color= 'black')
+        screen.draw.text('press ESC to exit', (WIDTH * 0.2, 370), fontsize=25, color=(0,0,0))
+#        screen.draw.text('press ESC to exit', (WIDTH * 0.2, 370), fontsize=20, color=(0,0,0))
