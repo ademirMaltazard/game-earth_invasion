@@ -17,6 +17,10 @@ pause_mode = False
 game_over = False
 game_over_time = 100
 
+state = 'menu'
+menu_options = ["START GAME", "SOUND: ON", "EXIT"]
+selected_option = 0
+
 # PLAYER CONFIGS
 player = Actor('player_r_idle_0')
 player.x = 50
@@ -156,8 +160,25 @@ def damaged():
 
 # when key is pressed
 def on_key_down(key):
-    global pause_mode
+    global pause_mode, selected_option, menu_options, state
 
+    # all menus configs ---------------------------------------
+    if state == 'menu':
+        if key == keys.UP or key == keys.W:
+            selected_option = (selected_option - 1) % len(menu_options)
+        if key == keys.DOWN or key == keys.S:
+            selected_option = (selected_option + 1) % len(menu_options)
+    
+        if key == 13:
+            option = menu_options[selected_option]
+
+            if 'START GAME' in option:
+                state = 'playing'
+
+            if 'EXIT' in option:
+                state = 'confirm_exit'
+
+    # game configs ---------------------------------------------
     if (cutscene == False):
         if key == keys.LSHIFT and player.stamin == player.max_stamin and (player.running == False) and (keyboard.left  or keyboard.a or keyboard.right or keyboard.d):
             player.running = True
@@ -197,372 +218,373 @@ def update():
     if pause_mode:
         return 
 
-    ### WORLD ACTIONS ----------------------------------------
-    # gravity actions
-    if get_base(player) < ground:
-        player.y += gravity
+    if state == 'playing':
+        ### WORLD ACTIONS ----------------------------------------
+        # gravity actions
+        if get_base(player) < ground:
+            player.y += gravity
 
-    if get_base(player) == ground:
-        player.image = get_idle()
-    
-    # set player in ground
-    if get_base(player) > ground:
-        player.y = ground - player.height / 2
+        if get_base(player) == ground:
+            player.image = get_idle()
+        
+        # set player in ground
+        if get_base(player) > ground:
+            player.y = ground - player.height / 2
 
-    ### PLAYER ACTIONS ----------------------------------------
-    if cutscene == False:
-        # left and right
-        if (keyboard.right or keyboard.d) and player.x < WIDTH - 25:
-            player.direction = 'right'
-            player.image = animate(player.anim_r_walk)
-            player.x += player.speed
-            fire.x += player.speed
-        if (keyboard.left  or keyboard.a) and player.x > 25:
-            player.direction = 'left'
-            player.image = animate(player.anim_l_walk)
-            player.x -= player.speed
-            fire.x -= player.speed
+        ### PLAYER ACTIONS ----------------------------------------
+        if cutscene == False:
+            # left and right
+            if (keyboard.right or keyboard.d) and player.x < WIDTH - 25:
+                player.direction = 'right'
+                player.image = animate(player.anim_r_walk)
+                player.x += player.speed
+                fire.x += player.speed
+            if (keyboard.left  or keyboard.a) and player.x > 25:
+                player.direction = 'left'
+                player.image = animate(player.anim_l_walk)
+                player.x -= player.speed
+                fire.x -= player.speed
 
-        # aim
-        if keyboard.w or keyboard.up:
-            if keyboard.left or keyboard.a:
-                player.image = animate(player.anim_l_firing)
-            elif keyboard.right or keyboard.d:
-                player.image = animate(player.anim_r_firing)
-            
-            # no definitive animation 
-            elif player.direction == 'left':
-                player.image = player.anim_l_firing['frames'][0]
+            # aim
+            if keyboard.w or keyboard.up:
+                if keyboard.left or keyboard.a:
+                    player.image = animate(player.anim_l_firing)
+                elif keyboard.right or keyboard.d:
+                    player.image = animate(player.anim_r_firing)
+                
+                # no definitive animation 
+                elif player.direction == 'left':
+                    player.image = player.anim_l_firing['frames'][0]
+                elif player.direction == 'right':
+                    player.image = player.anim_r_firing['frames'][0]
+
+
+            # check conditions for jump
+            if keyboard.space:
+                if get_base(player) == ground and player.jump_timer > 20 and player.stamin > player.max_stamin / 2:
+                    player.is_jumping = True
+                    player.stamin -= int(player.max_stamin / 3)
+                if player.is_jumping:
+                    player.y -= player.jump_force
+
+
+            # add one tick for timer
+            player.jump_timer += 1
+
+        # change jump variable when reach max height
+        if (get_base(player) <= ground - player.jump_height):
+            player.is_jumping = False
+            player.is_damaged = False
+            player.jump_timer = 0
+
+        # charge stamin
+        if player.stamin < player.max_stamin and (player.running == False):
+            player.stamin += 0.5
+
+        # stop player run
+        if player.stamin <= 0 and on_key_up(keys.LSHIFT):
+            player.running = False
+            player.speed = 2
+
+        # decrease stamina when running
+        if player.running:
+            player.stamin -= 1
+
+        if player.is_damaged:
+            player.y -= player.jump_force
+            if player.direction == 'left':
+                player.x += 10
+            if player.direction == 'right':
+                player.x -= 10
+
+        if player.is_invencible:
+            print(player.invencible_timer)
+
+            player.invencible_timer -= 1
+            if player.invencible_timer == 0:
+                print('pode morrer')
+                player.is_invencible = False
+                player.invencible_timer = 200
+
+
+        for life_point in player.current_life:
+            if life_point.hit:
+                life_point.image = animate(life_point.anim)
+
+        if player.life == 0:
+            game_over_time -= 1
+            if game_over_time == 0:
+                game_over = True
+
+
+        # verify colission player -> missile
+        if get_hitbox(player, player.hitbox).colliderect(get_hitbox(missile, missile.hitbox)) or get_hitbox(player, player.hitbox).colliderect(explosion._rect):
+            if player.is_invencible == False:
+                damaged()
+                explosion.x = missile.x
+                explosion.y = missile.x
+                explosion.explode = True
+                explosion.anim['play'] = True
+                missile.y = -20
+                missile.x = 0
+                missile.is_fired = False
+                player.is_damaged = True
+        
+        if get_hitbox(player, player.hitbox).colliderect(get_hitbox(boss, boss.left_tentacle)) or get_hitbox(player, player.hitbox).colliderect(get_hitbox(boss, boss.right_tentacle)):
+            if player.is_invencible == False:
+                damaged()
+                player.is_damaged =True
+
+
+
+
+        
+        # acress bullet timer
+        gun.bullet_timer += 1
+
+        # create a new bullet
+        if player.is_firing and gun.bullet_timer > 20 and gun.ammo > 0 and gun.reloading == False and (cutscene == False):
+            bullet = Actor('bullet')
+            fire.active = True
+            fire.anim['play'] = True
+            if player.direction == 'left':
+                bullet.x = player.x + 7
+                fire.x = player.x + 7
             elif player.direction == 'right':
-                player.image = player.anim_r_firing['frames'][0]
+                bullet.x = player.x - 7
+                fire.x = player.x - 7
+            bullet.y = player.y - player.height/2
+            fire.y = player.y - player.height/2 - 5
+            bullet.damage = 5
+            bullet.is_fired = True
+            gun.bullets.append(bullet)
+            gun.bullet_timer = 0
+            gun.ammo -= 1
 
+        if fire.active:
+            fire.image = animate(fire.anim)
+            if fire.anim['play'] == False:
+                fire.active = False
+                fire.anim['index'] = 0
+                fire.y = -60
 
-        # check conditions for jump
-        if keyboard.space:
-            if get_base(player) == ground and player.jump_timer > 20 and player.stamin > player.max_stamin / 2:
-                player.is_jumping = True
-                player.stamin -= int(player.max_stamin / 3)
-            if player.is_jumping:
-                player.y -= player.jump_force
+        # reload ammo
+        if gun.reloading:
+            gun.reload_time -= 1
+            if gun.reload_time <= 0:
+                gun.ammo = gun.max_ammo
+                gun.reload_time = 100
+                gun.reloading = False
+                
 
+        # bullet moviment
+        for bullet in gun.bullets:
+            bullet.y -= 3
 
-        # add one tick for timer
-        player.jump_timer += 1
+            if bullet.y <= 100:
+                bullet.is_fired = False
 
-    # change jump variable when reach max height
-    if (get_base(player) <= ground - player.jump_height):
-        player.is_jumping = False
-        player.is_damaged = False
-        player.jump_timer = 0
+            # verify collision bullet -> right eye 
+            if bullet.colliderect(get_hitbox(boss, boss.right_eye)):
+                if bullet.is_fired: boss.life -= bullet.damage
+                bullet.is_fired = False
+            
+            # verify collision bullet -> left eye 
+            if bullet.colliderect(get_hitbox(boss, boss.left_eye)):
+                if bullet.is_fired: boss.life -= bullet.damage
+                bullet.is_fired = False
 
-    # charge stamin
-    if player.stamin < player.max_stamin and (player.running == False):
-        player.stamin += 0.5
+            if bullet.colliderect(get_hitbox(boss, boss.mouth)):
+                if boss.acid_atk == 4 and bullet.is_fired: boss.life -= bullet.damage * 2
+                bullet.is_fired = False
 
-    # stop player run
-    if player.stamin <= 0 and on_key_up(keys.LSHIFT):
-        player.running = False
-        player.speed = 2
+            if bullet.colliderect(get_hitbox(boss, boss.body)):
+                bullet.is_fired = False
+            
+            # verify collision bullet -> right tentacle 
+            if bullet.colliderect(get_hitbox(boss, boss.right_tentacle)):
+                bullet.is_fired = False
 
-    # decrease stamina when running
-    if player.running:
-        player.stamin -= 1
-
-    if player.is_damaged:
-        player.y -= player.jump_force
-        if player.direction == 'left':
-            player.x += 10
-        if player.direction == 'right':
-            player.x -= 10
-
-    if player.is_invencible:
-        print(player.invencible_timer)
-
-        player.invencible_timer -= 1
-        if player.invencible_timer == 0:
-            print('pode morrer')
-            player.is_invencible = False
-            player.invencible_timer = 200
-
-
-    for life_point in player.current_life:
-        if life_point.hit:
-            life_point.image = animate(life_point.anim)
-
-    if player.life == 0:
-        game_over_time -= 1
-        if game_over_time == 0:
-            game_over = True
-
-
-    # verify colission player -> missile
-    if get_hitbox(player, player.hitbox).colliderect(get_hitbox(missile, missile.hitbox)) or get_hitbox(player, player.hitbox).colliderect(explosion._rect):
-        if player.is_invencible == False:
-            damaged()
-            explosion.x = missile.x
-            explosion.y = missile.x
-            explosion.explode = True
-            explosion.anim['play'] = True
-            missile.y = -20
-            missile.x = 0
-            missile.is_fired = False
-            player.is_damaged = True
-    
-    if get_hitbox(player, player.hitbox).colliderect(get_hitbox(boss, boss.left_tentacle)) or get_hitbox(player, player.hitbox).colliderect(get_hitbox(boss, boss.right_tentacle)):
-        if player.is_invencible == False:
-            damaged()
-            player.is_damaged =True
-
-
-
-
-    
-    # acress bullet timer
-    gun.bullet_timer += 1
-
-    # create a new bullet
-    if player.is_firing and gun.bullet_timer > 20 and gun.ammo > 0 and gun.reloading == False and (cutscene == False):
-        bullet = Actor('bullet')
-        fire.active = True
-        fire.anim['play'] = True
-        if player.direction == 'left':
-            bullet.x = player.x + 7
-            fire.x = player.x + 7
-        elif player.direction == 'right':
-            bullet.x = player.x - 7
-            fire.x = player.x - 7
-        bullet.y = player.y - player.height/2
-        fire.y = player.y - player.height/2 - 5
-        bullet.damage = 5
-        bullet.is_fired = True
-        gun.bullets.append(bullet)
-        gun.bullet_timer = 0
-        gun.ammo -= 1
-
-    if fire.active:
-        fire.image = animate(fire.anim)
-        if fire.anim['play'] == False:
-            fire.active = False
-            fire.anim['index'] = 0
-            fire.y = -60
-
-    # reload ammo
-    if gun.reloading:
-        gun.reload_time -= 1
-        if gun.reload_time <= 0:
-            gun.ammo = gun.max_ammo
-            gun.reload_time = 100
-            gun.reloading = False
+            # verify collision bullet -> left tentacle 
+            if bullet.colliderect(get_hitbox(boss, boss.left_tentacle)):
+                bullet.is_fired = False
             
 
-    # bullet moviment
-    for bullet in gun.bullets:
-        bullet.y -= 3
 
-        if bullet.y <= 100:
-            bullet.is_fired = False
+        # remove bullets when getout screen
+        gun.bullets[:] = [b for b in gun.bullets if b.is_fired]
 
-        # verify collision bullet -> right eye 
-        if bullet.colliderect(get_hitbox(boss, boss.right_eye)):
-            if bullet.is_fired: boss.life -= bullet.damage
-            bullet.is_fired = False
+        ### BOSS ACTIONS ----------------------------------------
+        if boss.alive == False and player.x > WIDTH/3 and boss.y < 140:
+            cutscene = True
+            boss.y += 1
         
-        # verify collision bullet -> left eye 
-        if bullet.colliderect(get_hitbox(boss, boss.left_eye)):
-            if bullet.is_fired: boss.life -= bullet.damage
-            bullet.is_fired = False
+        if boss.y == 140:
+            boss.alive = True
 
-        if bullet.colliderect(get_hitbox(boss, boss.mouth)):
-            if boss.acid_atk == 4 and bullet.is_fired: boss.life -= bullet.damage * 2
-            bullet.is_fired = False
+        if boss.alive:
+            cutscene = False
+            boss.clock += 1
 
-        if bullet.colliderect(get_hitbox(boss, boss.body)):
-            bullet.is_fired = False
-        
-        # verify collision bullet -> right tentacle 
-        if bullet.colliderect(get_hitbox(boss, boss.right_tentacle)):
-            bullet.is_fired = False
+            # left and right
+            boss.x += boss.steps
+            if boss.x >= WIDTH - 140 or boss.x <= 140:
+                boss.steps = boss.steps * -1
+            
+            # boss atack
+            if boss.clock == boss.atack_rate:
+                attack = randint(0,3)
+                boss.actual_steps = boss.steps
 
-        # verify collision bullet -> left tentacle 
-        if bullet.colliderect(get_hitbox(boss, boss.left_tentacle)):
-            bullet.is_fired = False
-        
-
-
-    # remove bullets when getout screen
-    gun.bullets[:] = [b for b in gun.bullets if b.is_fired]
-
-    ### BOSS ACTIONS ----------------------------------------
-    if boss.alive == False and player.x > WIDTH/3 and boss.y < 140:
-        cutscene = True
-        boss.y += 1
-    
-    if boss.y == 140:
-        boss.alive = True
-
-    if boss.alive:
-        cutscene = False
-        boss.clock += 1
-
-        # left and right
-        boss.x += boss.steps
-        if boss.x >= WIDTH - 140 or boss.x <= 140:
-            boss.steps = boss.steps * -1
-        
-        # boss atack
-        if boss.clock == boss.atack_rate:
-            attack = randint(0,3)
-            boss.actual_steps = boss.steps
-
-            if attack == 0:
-                boss.missile_atk = True
-                print('ataque missil')
-            if attack == 1:
-                boss.r_tentacle_atk = True
-                print('ataque tentaculo direito')
-            if attack == 2:
-                boss.l_tentacle_atk = True
-                print('ataque tentaculo esquerdo')
-            if attack == 3:
-                boss.dual_tentacle_atk = True
-                print('ataque dos dois tentaculos')
-            if attack == 4:
-                boss.acid_atk = True
-                print('ataque de acido')
+                if attack == 0:
+                    boss.missile_atk = True
+                    print('ataque missil')
+                if attack == 1:
+                    boss.r_tentacle_atk = True
+                    print('ataque tentaculo direito')
+                if attack == 2:
+                    boss.l_tentacle_atk = True
+                    print('ataque tentaculo esquerdo')
+                if attack == 3:
+                    boss.dual_tentacle_atk = True
+                    print('ataque dos dois tentaculos')
+                if attack == 4:
+                    boss.acid_atk = True
+                    print('ataque de acido')
 
 
-        # MISSILE ACTIONS ----------------------------------------
-        # attacking with Missil
-        if boss.missile_atk:
-            missile.x = boss.x
-            missile.y = boss.y
-            missile.is_fired = True
-            boss.clock = 0
-            boss.missile_atk = False
-
-        # colision MISSILE --> GROUND
-        if get_base(get_hitbox(missile, missile.hitbox)) >= ground:
-            explosion.x = missile.x
-            explosion.y = ground - explosion.height / 2
-            explosion.explode = True
-            explosion.anim['play'] = True
-            missile.y = -20
-            missile.x = 0
-            missile.is_fired = False
-
-        # missile moviment
-        if missile.is_fired:
-            missile.y += missile.speed
-            if missile.x > player.x:
-                missile.x -= 1
-            elif missile.x < player.x:
-                missile.x += 1
-            missile.image = animate(missile.anim)
-
-        # EXPLOSION ACTIONS ------------------------------------------------------
-        if explosion.explode and explosion.anim['play']:
-            # keep the base of image on ground, regardless of the size of the image
-            explosion.y = ground - explosion.height / 2
-            explosion.image = animate(explosion.anim)
-        
-        if explosion.anim['play'] == False:
-            explosion.x = 0
-            explosion.y = -50
-            explosion.explode = False
-
-        # TENTACLE ACTIONS ----------------------------------------
-        if boss.r_tentacle_atk:
-            boss.atk_timer += 1
-            boss.steps = 0
-            if boss.atk_timer < 30:
-                boss.right_tentacle = {'desloc_x' : -18, 'desloc_y': -30, 'width': 130, 'height': 80} #for defense
-                boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -30, 'width': 130, 'height': 80}
-                get_hitbox(boss, boss.right_tentacle)
-            elif boss.atk_timer < 70:
-                boss.right_tentacle = {'desloc_x' : -68, 'desloc_y': -30, 'width': 60, 'height': 300}
-                get_hitbox(boss, boss.right_tentacle)
-            elif boss.atk_timer < 100:
-                boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -30, 'width': 60, 'height': 60} #normal state
-                boss.right_tentacle = {'desloc_x' : -18, 'desloc_y': -30, 'width': 130, 'height': 80}
-                get_hitbox(boss, boss.right_tentacle)
-            else:
-                boss.right_tentacle = {'desloc_x' : -68, 'desloc_y': -30, 'width': 60, 'height': 60}
-                get_hitbox(boss, boss.right_tentacle)
-                boss.r_tentacle_atk = False
-                boss.steps = boss.actual_steps
-                boss.atk_timer = 0
+            # MISSILE ACTIONS ----------------------------------------
+            # attacking with Missil
+            if boss.missile_atk:
+                missile.x = boss.x
+                missile.y = boss.y
+                missile.is_fired = True
                 boss.clock = 0
+                boss.missile_atk = False
 
-        if boss.l_tentacle_atk:
-            boss.atk_timer += 1
-            boss.steps = 0
-            if boss.atk_timer < 30:
-                boss.right_tentacle = {'desloc_x' : -18, 'desloc_y': -30, 'width': 130, 'height': 80} #for defense
-                boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -30, 'width': 130, 'height': 80}
-                get_hitbox(boss, boss.left_tentacle)
-            elif boss.atk_timer < 70:
-                boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -30, 'width': 60, 'height': 300}
-                get_hitbox(boss, boss.left_tentacle)
-            elif boss.atk_timer < 100:
-                boss.right_tentacle = {'desloc_x' : -68, 'desloc_y': -30, 'width': 60, 'height': 60} #normal state
-                boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -30, 'width': 130, 'height': 80}
-                get_hitbox(boss, boss.left_tentacle)
-            else:
-                boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -30, 'width': 60, 'height': 60}
-                get_hitbox(boss, boss.left_tentacle)
-                boss.l_tentacle_atk = False
-                boss.steps = boss.actual_steps
-                boss.atk_timer = 0
-                boss.clock = 0
-        
-        if boss.dual_tentacle_atk:
-            boss.atk_timer += 1
-            boss.steps = 0
-            if boss.atk_timer < 30:
-                boss.right_tentacle = {'desloc_x' : -18, 'desloc_y': -30, 'width': 130, 'height': 80}
-                boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -30, 'width': 130, 'height': 80}
-                get_hitbox(boss, boss.right_tentacle)
-                get_hitbox(boss, boss.left_tentacle)
-            elif boss.atk_timer < 70:
-                boss.right_tentacle = {'desloc_x' : -68, 'desloc_y': -30, 'width': 60, 'height': 300}
-                boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -30, 'width': 60, 'height': 300}
-                get_hitbox(boss, boss.right_tentacle)
-                get_hitbox(boss, boss.left_tentacle)
-            elif boss.atk_timer < 100:
-                boss.right_tentacle = {'desloc_x' : -18, 'desloc_y': -30, 'width': 130, 'height': 80}
-                boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -30, 'width': 130, 'height': 80}
-                get_hitbox(boss, boss.right_tentacle)
-                get_hitbox(boss, boss.left_tentacle)
-            else:
-                boss.right_tentacle = {'desloc_x' : -68, 'desloc_y': -30, 'width': 60, 'height': 60}
-                boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -30, 'width': 60, 'height': 60}
-                get_hitbox(boss, boss.right_tentacle)
-                get_hitbox(boss, boss.left_tentacle)
-                boss.dual_tentacle_atk = False
-                boss.steps = boss.actual_steps
-                boss.atk_timer = 0
-                boss.clock = 0
-        
-        # on development
-        if boss.acid_atk:
-            boss.atk_timer += 1
-            boss.steps = 0
-            if boss.atk_timer < 30:
-                boss.acid = {'desloc_x' : 15, 'desloc_y': -10, 'width': 30, 'height': 70}
-                get_hitbox(boss, boss.acid)
-            elif boss.atk_timer < 70:
-                boss.acid = {'desloc_x' : 15, 'desloc_y': -10, 'width': 30, 'height': 150}
-                get_hitbox(boss, boss.acid)
-            elif boss.atk_timer < 100:
-                boss.acid = {'desloc_x' : 15, 'desloc_y': -10, 'width': 30, 'height': 330}
-                get_hitbox(boss, boss.acid)
-            else:
-                boss.acid = {'desloc_x' : 15, 'desloc_y': -10, 'width': 30, 'height': 15}
-                get_hitbox(boss, boss.acid)
-                boss.acid_atk = False
-                boss.steps = boss.actual_steps
-                boss.atk_timer = 0
-                boss.clock = 0
+            # colision MISSILE --> GROUND
+            if get_base(get_hitbox(missile, missile.hitbox)) >= ground:
+                explosion.x = missile.x
+                explosion.y = ground - explosion.height / 2
+                explosion.explode = True
+                explosion.anim['play'] = True
+                missile.y = -20
+                missile.x = 0
+                missile.is_fired = False
+
+            # missile moviment
+            if missile.is_fired:
+                missile.y += missile.speed
+                if missile.x > player.x:
+                    missile.x -= 1
+                elif missile.x < player.x:
+                    missile.x += 1
+                missile.image = animate(missile.anim)
+
+            # EXPLOSION ACTIONS ------------------------------------------------------
+            if explosion.explode and explosion.anim['play']:
+                # keep the base of image on ground, regardless of the size of the image
+                explosion.y = ground - explosion.height / 2
+                explosion.image = animate(explosion.anim)
+            
+            if explosion.anim['play'] == False:
+                explosion.x = 0
+                explosion.y = -50
+                explosion.explode = False
+
+            # TENTACLE ACTIONS ----------------------------------------
+            if boss.r_tentacle_atk:
+                boss.atk_timer += 1
+                boss.steps = 0
+                if boss.atk_timer < 30:
+                    boss.right_tentacle = {'desloc_x' : -18, 'desloc_y': -30, 'width': 130, 'height': 80} #for defense
+                    boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -30, 'width': 130, 'height': 80}
+                    get_hitbox(boss, boss.right_tentacle)
+                elif boss.atk_timer < 70:
+                    boss.right_tentacle = {'desloc_x' : -68, 'desloc_y': -30, 'width': 60, 'height': 300}
+                    get_hitbox(boss, boss.right_tentacle)
+                elif boss.atk_timer < 100:
+                    boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -30, 'width': 60, 'height': 60} #normal state
+                    boss.right_tentacle = {'desloc_x' : -18, 'desloc_y': -30, 'width': 130, 'height': 80}
+                    get_hitbox(boss, boss.right_tentacle)
+                else:
+                    boss.right_tentacle = {'desloc_x' : -68, 'desloc_y': -30, 'width': 60, 'height': 60}
+                    get_hitbox(boss, boss.right_tentacle)
+                    boss.r_tentacle_atk = False
+                    boss.steps = boss.actual_steps
+                    boss.atk_timer = 0
+                    boss.clock = 0
+
+            if boss.l_tentacle_atk:
+                boss.atk_timer += 1
+                boss.steps = 0
+                if boss.atk_timer < 30:
+                    boss.right_tentacle = {'desloc_x' : -18, 'desloc_y': -30, 'width': 130, 'height': 80} #for defense
+                    boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -30, 'width': 130, 'height': 80}
+                    get_hitbox(boss, boss.left_tentacle)
+                elif boss.atk_timer < 70:
+                    boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -30, 'width': 60, 'height': 300}
+                    get_hitbox(boss, boss.left_tentacle)
+                elif boss.atk_timer < 100:
+                    boss.right_tentacle = {'desloc_x' : -68, 'desloc_y': -30, 'width': 60, 'height': 60} #normal state
+                    boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -30, 'width': 130, 'height': 80}
+                    get_hitbox(boss, boss.left_tentacle)
+                else:
+                    boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -30, 'width': 60, 'height': 60}
+                    get_hitbox(boss, boss.left_tentacle)
+                    boss.l_tentacle_atk = False
+                    boss.steps = boss.actual_steps
+                    boss.atk_timer = 0
+                    boss.clock = 0
+            
+            if boss.dual_tentacle_atk:
+                boss.atk_timer += 1
+                boss.steps = 0
+                if boss.atk_timer < 30:
+                    boss.right_tentacle = {'desloc_x' : -18, 'desloc_y': -30, 'width': 130, 'height': 80}
+                    boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -30, 'width': 130, 'height': 80}
+                    get_hitbox(boss, boss.right_tentacle)
+                    get_hitbox(boss, boss.left_tentacle)
+                elif boss.atk_timer < 70:
+                    boss.right_tentacle = {'desloc_x' : -68, 'desloc_y': -30, 'width': 60, 'height': 300}
+                    boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -30, 'width': 60, 'height': 300}
+                    get_hitbox(boss, boss.right_tentacle)
+                    get_hitbox(boss, boss.left_tentacle)
+                elif boss.atk_timer < 100:
+                    boss.right_tentacle = {'desloc_x' : -18, 'desloc_y': -30, 'width': 130, 'height': 80}
+                    boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -30, 'width': 130, 'height': 80}
+                    get_hitbox(boss, boss.right_tentacle)
+                    get_hitbox(boss, boss.left_tentacle)
+                else:
+                    boss.right_tentacle = {'desloc_x' : -68, 'desloc_y': -30, 'width': 60, 'height': 60}
+                    boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -30, 'width': 60, 'height': 60}
+                    get_hitbox(boss, boss.right_tentacle)
+                    get_hitbox(boss, boss.left_tentacle)
+                    boss.dual_tentacle_atk = False
+                    boss.steps = boss.actual_steps
+                    boss.atk_timer = 0
+                    boss.clock = 0
+            
+            # on development
+            if boss.acid_atk:
+                boss.atk_timer += 1
+                boss.steps = 0
+                if boss.atk_timer < 30:
+                    boss.acid = {'desloc_x' : 15, 'desloc_y': -10, 'width': 30, 'height': 70}
+                    get_hitbox(boss, boss.acid)
+                elif boss.atk_timer < 70:
+                    boss.acid = {'desloc_x' : 15, 'desloc_y': -10, 'width': 30, 'height': 150}
+                    get_hitbox(boss, boss.acid)
+                elif boss.atk_timer < 100:
+                    boss.acid = {'desloc_x' : 15, 'desloc_y': -10, 'width': 30, 'height': 330}
+                    get_hitbox(boss, boss.acid)
+                else:
+                    boss.acid = {'desloc_x' : 15, 'desloc_y': -10, 'width': 30, 'height': 15}
+                    get_hitbox(boss, boss.acid)
+                    boss.acid_atk = False
+                    boss.steps = boss.actual_steps
+                    boss.atk_timer = 0
+                    boss.clock = 0
 
 
 """ TEST 
@@ -575,7 +597,7 @@ def update():
 
 ### DRAW SPRITES ----------------------------------------
 def draw():
-    if menu:
+    if state == 'menu':
         screen.clear()
 
         screen.draw.filled_rect(Rect((0, 0), (WIDTH, HEIGHT)), (100, 100, 100))
@@ -584,8 +606,17 @@ def draw():
         screen.draw.text('EARTH INVASION', (WIDTH * 0.25, 160), fontsize=60, color="black")
         screen.draw.filled_rect(Rect((0, 210), (WIDTH, 10)), (200, 0, 0))
 
+        for i, text in enumerate(menu_options):
+            y = 250 + i * 30
+            color = 'red' if i == selected_option else ('gray')
+            screen.draw.text(text, (WIDTH * 0.2 + 1, y + 1), fontsize=25, color='black')
+            screen.draw.text(text, (WIDTH * 0.2, y), fontsize=25, color=color)
+        arrow_x = WIDTH * 0.2 - 15
+        arrow_y = 250 + selected_option * 30
+        screen.draw.text('>', (arrow_x, arrow_y), fontsize=25, color='gray')
 
-    if not game_over and not menu:
+
+    if state == 'playing':
         bg.draw()
 
         player.draw()
