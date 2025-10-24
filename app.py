@@ -167,8 +167,6 @@ def damaged():
 def on_key_down(key):
     global pause_mode, selected_option, selected_confirm, confirm_options, menu_options, state, input_blocker
 
-    
-    
     # all menus configs ---------------------------------------
     if state == 'menu':
         if input_blocker:
