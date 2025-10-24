@@ -11,15 +11,20 @@ environ['SDL_VIDEO_CENTERED'] = '1'
 bg = Actor('background')
 gravity = 5
 ground = HEIGHT - 16
-cutscene = False
-menu = False
-pause_mode = False
-game_over = False
-game_over_time = 100
 
+# for menu's
 state = 'menu'
 menu_options = ["START GAME", "SOUND: ON", "EXIT"]
+confirm_options = ['YES', 'NO']
+cutscene = False
+pause_mode = False
+game_over_timer = 100
 selected_option = 0
+selected_confirm = 0
+
+# for block double input
+input_blocker = False
+blocker_count = 0
 
 # PLAYER CONFIGS
 player = Actor('player_r_idle_0')
@@ -160,38 +165,70 @@ def damaged():
 
 # when key is pressed
 def on_key_down(key):
-    global pause_mode, selected_option, menu_options, state
+    global pause_mode, selected_option, selected_confirm, confirm_options, menu_options, state, input_blocker
 
+    
+    
     # all menus configs ---------------------------------------
     if state == 'menu':
+        if input_blocker:
+            return
+        
         if key == keys.UP or key == keys.W:
             selected_option = (selected_option - 1) % len(menu_options)
         if key == keys.DOWN or key == keys.S:
             selected_option = (selected_option + 1) % len(menu_options)
     
-        if key == 13:
+        if key == keys.RETURN:
             option = menu_options[selected_option]
 
             if 'START GAME' in option:
                 state = 'playing'
 
             if 'EXIT' in option:
+                input_blocker = True
                 state = 'confirm_exit'
+                selected_option = 0
+    
+    if state == 'confirm_exit':
+        if input_blocker:
+            return
+        
+        if key == keys.LEFT or key == keys.A:
+            selected_confirm = (selected_confirm - 1) % len(confirm_options)
+        if key == keys.RIGHT or key == keys.D:
+            selected_confirm = (selected_confirm + 1) % len(confirm_options)
+
+        if key == keys.RETURN:
+            option = confirm_options[selected_confirm]
+
+            if 'YES' in option:
+                exit()
+            if 'NO' in option:
+                state = 'menu'
+                input_blocker = True
+                selected_option = 0
+        
+        if key == keys.ESCAPE:
+            state = 'menu'
+            input_blocker = True
+            selected_option = 0
 
     # game configs ---------------------------------------------
-    if (cutscene == False):
-        if key == keys.LSHIFT and player.stamin == player.max_stamin and (player.running == False) and (keyboard.left  or keyboard.a or keyboard.right or keyboard.d):
-            player.running = True
-            player.speed = 4
+    if state == 'playing':
+        if (cutscene == False):
+            if key == keys.LSHIFT and player.stamin == player.max_stamin and (player.running == False) and (keyboard.left  or keyboard.a or keyboard.right or keyboard.d):
+                player.running = True
+                player.speed = 4
 
-        # Reolad ammo
-        if key == keys.R:
-            gun.reloading = True
-        
-        # 13 = ENTER BUTTON for fire
-        if key == 13 and keyboard.w:
-            player.is_firing = True
-        
+            # Reolad ammo
+            if key == keys.R:
+                gun.reloading = True
+            
+            # 13 = ENTER BUTTON for fire
+            if key == 13 and keyboard.w:
+                player.is_firing = True
+            
         if key == keys.ESCAPE:
             pause_mode = not pause_mode
             ### TO DO MENU OPTIONS ###
@@ -210,13 +247,20 @@ def on_key_up(key):
 get_player_life(player)
 
 def update():
-    global cutscene, game_over, game_over_time, pause_mode
+    global cutscene, state, game_over_timer, pause_mode, input_blocker, blocker_count
 
-    if game_over:
+    if state == 'game_over':
         return
 
     if pause_mode:
-        return 
+        return
+    
+    if input_blocker:
+        blocker_count += 1
+        if blocker_count > 15:  # cerca de 0.25s
+            print(input_blocker)
+            input_blocker = False
+            blocker_count = 0
 
     if state == 'playing':
         ### WORLD ACTIONS ----------------------------------------
@@ -312,9 +356,9 @@ def update():
                 life_point.image = animate(life_point.anim)
 
         if player.life == 0:
-            game_over_time -= 1
-            if game_over_time == 0:
-                game_over = True
+            game_over_timer -= 1
+            if game_over_timer == 0:
+                state = 'game_over'
 
 
         # verify colission player -> missile
@@ -600,12 +644,16 @@ def draw():
     if state == 'menu':
         screen.clear()
 
+        # background
         screen.draw.filled_rect(Rect((0, 0), (WIDTH, HEIGHT)), (100, 100, 100))
+        
+        # show title
         screen.draw.filled_rect(Rect((0, 140), (WIDTH, 10)), (200, 0, 0))
         screen.draw.text('EARTH INVASION', (WIDTH * 0.25 + 2, 162), fontsize=60, color="gray")
         screen.draw.text('EARTH INVASION', (WIDTH * 0.25, 160), fontsize=60, color="black")
         screen.draw.filled_rect(Rect((0, 210), (WIDTH, 10)), (200, 0, 0))
 
+        # show menu option
         for i, text in enumerate(menu_options):
             y = 250 + i * 30
             color = 'red' if i == selected_option else ('gray')
@@ -615,7 +663,27 @@ def draw():
         arrow_y = 250 + selected_option * 30
         screen.draw.text('>', (arrow_x, arrow_y), fontsize=25, color='gray')
 
+    if state == 'confirm_exit':
+        # background confirm windown
+        screen.draw.filled_rect(Rect((int(WIDTH*.25 - 5), int(HEIGHT*.25 - 5)), (WIDTH*.5 + 10, HEIGHT*.5 + 10)), (0, 0, 0))
+        screen.draw.filled_rect(Rect((int(WIDTH*.25), int(HEIGHT*.25)), (WIDTH*.5, HEIGHT*.5)), (100, 100, 100))
+        
+        # confirm windown title
+        screen.draw.text('ARE YOU SURE?', center=(WIDTH/2+1, HEIGHT/2-49), fontsize=25, color='black')
+        screen.draw.text('ARE YOU SURE?', center=(WIDTH/2, HEIGHT/2-50), fontsize=25, color='gray')
+        
+        # confirm windown options
+        for i, text in enumerate(confirm_options):
+            x = 255 + i * 150
+            color = 'red' if i == selected_confirm else ('gray')
+            screen.draw.text(text, (x + 1, 270 + 1), fontsize=25, color='black')
+            screen.draw.text(text, (x, 270), fontsize=25, color=color)
+        arrow_x = 255 + selected_confirm * 150 - 15
+        arrow_y = 268
+        screen.draw.text('>', (arrow_x, arrow_y), fontsize=25, color='gray')
 
+
+    # game 
     if state == 'playing':
         bg.draw()
 
@@ -657,15 +725,11 @@ def draw():
             explosion.draw()
 
         #--------------------
-        # ground line 
-        screen.draw.rect(Rect((0, ground), (WIDTH, 2)), ('blue')) # FOR DEBUG
-
         # SCREEN HUD
         for life_point in player.current_life:
             life_point.draw()
         
         # screen.draw.text(str(player.life), (60, 40), fontsize=40, color="red")
-
         # reload time bar 
         if gun.reloading:
             screen.draw.filled_rect(Rect((gun.x - gun.width/2, gun.y - 20), (gun.reload_time/3, 5)), ('gray'))
@@ -684,7 +748,7 @@ def draw():
         
 
     # GAME OVER SCREEN
-    if game_over:
+    if state == 'game_over':
         screen.clear()
 
         screen.draw.filled_rect(Rect((0, 0), (WIDTH, HEIGHT)), (100, 100, 100))
