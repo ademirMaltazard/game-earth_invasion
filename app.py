@@ -14,10 +14,11 @@ ground = HEIGHT - 16
 
 # for menu's
 state = 'menu'
+actual_state = 'menu' # for back screen more used for confirmation function
 menu_options = ["START GAME", "SOUND: ON", "EXIT"]
+pause_menu_options = ["CONTINUE", "SOUND: ON", 'QUIT GAME']
 confirm_options = ['YES', 'NO']
 cutscene = False
-pause_mode = False
 game_over_timer = 100
 selected_option = 0
 selected_confirm = 0
@@ -163,11 +164,11 @@ def damaged():
                 player.is_invencible = True
                 break           
 
-# when key is pressed
+# when key is pressed ------------------------------------------------
 def on_key_down(key):
-    global pause_mode, selected_option, selected_confirm, confirm_options, menu_options, state, input_blocker
+    global selected_option, selected_confirm, confirm_options, menu_options, state, actual_state, input_blocker
 
-    # all menus configs ---------------------------------------
+# MENU CONFIGS --------------------------------------------------------
     if state == 'menu':
         if input_blocker:
             return
@@ -184,10 +185,12 @@ def on_key_down(key):
                 state = 'playing'
 
             if 'EXIT' in option:
+                actual_state = 'menu'
                 input_blocker = True
                 state = 'confirm_exit'
                 selected_option = 0
     
+# CONFIRM SCREEN CONFIGS --------------------------------------
     if state == 'confirm_exit':
         if input_blocker:
             return
@@ -203,16 +206,15 @@ def on_key_down(key):
             if 'YES' in option:
                 exit()
             if 'NO' in option:
-                state = 'menu'
+                state = actual_state
                 input_blocker = True
-                selected_option = 0
         
         if key == keys.ESCAPE:
-            state = 'menu'
+            state = actual_state
             input_blocker = True
             selected_option = 0
 
-    # game configs ---------------------------------------------
+# GAME CONFIGS ---------------------------------------------
     if state == 'playing':
         if (cutscene == False):
             if key == keys.LSHIFT and player.stamin == player.max_stamin and (player.running == False) and (keyboard.left  or keyboard.a or keyboard.right or keyboard.d):
@@ -228,29 +230,51 @@ def on_key_down(key):
                 player.is_firing = True
             
         if key == keys.ESCAPE:
-            pause_mode = not pause_mode
+            state = 'paused'
+            actual_state = 'playing'
             ### TO DO MENU OPTIONS ###
 
+    if state == 'paused':
+        if input_blocker:
+            return
 
-# when key is released
+        if key == keys.UP or key == keys.W:
+            selected_option = (selected_option - 1) % len(pause_menu_options)
+        if key == keys.DOWN or key == keys.S:
+            selected_option = (selected_option + 1) % len(pause_menu_options)
+    
+        if key == keys.RETURN:
+            option = pause_menu_options[selected_option]
+
+            if 'CONTINUE' in option:
+                state = 'playing'
+
+            if 'SOUND: ON' in option:
+                print('SOM')
+
+            if 'QUIT GAME' in option:
+                actual_state = 'paused'
+                state = 'confirm_exit'
+                selected_option = 0
+
+
+# when key is released -------------------------------------------
 def on_key_up(key):
-    if key == keys.LSHIFT:
-        player.speed = 2
-        player.running = False
+    if state == 'playing':
+        if key == keys.LSHIFT:
+            player.speed = 2
+            player.running = False
 
-    # 13 = ENTER BUTTON
-    if key == 13:
-        player.is_firing = False
+        # 13 = ENTER BUTTON
+        if key == keys.RETURN:
+            player.is_firing = False
 
 get_player_life(player)
 
 def update():
-    global cutscene, state, game_over_timer, pause_mode, input_blocker, blocker_count
+    global cutscene, state, game_over_timer, input_blocker, blocker_count
 
     if state == 'game_over':
-        return
-
-    if pause_mode:
         return
     
     if input_blocker:
@@ -261,7 +285,7 @@ def update():
             blocker_count = 0
 
     if state == 'playing':
-        ### WORLD ACTIONS ----------------------------------------
+### WORLD ACTIONS ----------------------------------------
         # gravity actions
         if get_base(player) < ground:
             player.y += gravity
@@ -273,7 +297,7 @@ def update():
         if get_base(player) > ground:
             player.y = ground - player.height / 2
 
-        ### PLAYER ACTIONS ----------------------------------------
+### PLAYER ACTIONS ----------------------------------------
         if cutscene == False:
             # left and right
             if (keyboard.right or keyboard.d) and player.x < WIDTH - 25:
@@ -377,10 +401,7 @@ def update():
                 damaged()
                 player.is_damaged =True
 
-
-
-
-        
+### GUN AND BULLET ACTIONS -------------------
         # acress bullet timer
         gun.bullet_timer += 1
 
@@ -456,7 +477,7 @@ def update():
         # remove bullets when getout screen
         gun.bullets[:] = [b for b in gun.bullets if b.is_fired]
 
-        ### BOSS ACTIONS ----------------------------------------
+### BOSS ACTIONS ----------------------------------------
         if boss.alive == False and player.x > WIDTH/3 and boss.y < 140:
             cutscene = True
             boss.y += 1
@@ -475,7 +496,7 @@ def update():
             
             # boss atack
             if boss.clock == boss.atack_rate:
-                attack = randint(0,3)
+                attack = randint(0,4)
                 boss.actual_steps = boss.steps
 
                 if attack == 0:
@@ -495,7 +516,7 @@ def update():
                     print('ataque de acido')
 
 
-            # MISSILE ACTIONS ----------------------------------------
+# MISSILE ACTIONS ----------------------------------------
             # attacking with Missil
             if boss.missile_atk:
                 missile.x = boss.x
@@ -523,7 +544,7 @@ def update():
                     missile.x += 1
                 missile.image = animate(missile.anim)
 
-            # EXPLOSION ACTIONS ------------------------------------------------------
+# EXPLOSION ACTIONS ------------------------------------------------------
             if explosion.explode and explosion.anim['play']:
                 # keep the base of image on ground, regardless of the size of the image
                 explosion.y = ground - explosion.height / 2
@@ -534,7 +555,7 @@ def update():
                 explosion.y = -50
                 explosion.explode = False
 
-            # TENTACLE ACTIONS ----------------------------------------
+# TENTACLE ACTIONS ----------------------------------------
             if boss.r_tentacle_atk:
                 boss.atk_timer += 1
                 boss.steps = 0
@@ -647,7 +668,7 @@ def draw():
         
         # show title
         screen.draw.filled_rect(Rect((0, 140), (WIDTH, 10)), (200, 0, 0))
-        screen.draw.text('EARTH INVASION', (WIDTH * 0.25 + 2, 162), fontsize=60, color="gray")
+        screen.draw.text('EARTH INVASION', (WIDTH * 0.25 + 3, 162), fontsize=60, color="gray")
         screen.draw.text('EARTH INVASION', (WIDTH * 0.25, 160), fontsize=60, color="black")
         screen.draw.filled_rect(Rect((0, 210), (WIDTH, 10)), (200, 0, 0))
 
@@ -655,11 +676,12 @@ def draw():
         for i, text in enumerate(menu_options):
             y = 250 + i * 30
             color = 'red' if i == selected_option else ('gray')
-            screen.draw.text(text, (WIDTH * 0.2 + 1, y + 1), fontsize=25, color='black')
+            screen.draw.text(text, (WIDTH * 0.2 + 2, y + 1), fontsize=25, color='black')
             screen.draw.text(text, (WIDTH * 0.2, y), fontsize=25, color=color)
         arrow_x = WIDTH * 0.2 - 15
         arrow_y = 250 + selected_option * 30
-        screen.draw.text('>', (arrow_x, arrow_y), fontsize=25, color='gray')
+        screen.draw.text('>', (arrow_x+2, arrow_y+1), fontsize=25, color='black')
+        screen.draw.text('>', (arrow_x, arrow_y), fontsize=25, color='red')
 
     if state == 'confirm_exit':
         # background confirm windown
@@ -667,18 +689,19 @@ def draw():
         screen.draw.filled_rect(Rect((int(WIDTH*.25), int(HEIGHT*.25)), (WIDTH*.5, HEIGHT*.5)), (100, 100, 100))
         
         # confirm windown title
-        screen.draw.text('ARE YOU SURE?', center=(WIDTH/2+1, HEIGHT/2-49), fontsize=25, color='black')
+        screen.draw.text('ARE YOU SURE?', center=(WIDTH/2+2, HEIGHT/2-49), fontsize=25, color='black')
         screen.draw.text('ARE YOU SURE?', center=(WIDTH/2, HEIGHT/2-50), fontsize=25, color='gray')
         
         # confirm windown options
         for i, text in enumerate(confirm_options):
             x = 255 + i * 150
             color = 'red' if i == selected_confirm else ('gray')
-            screen.draw.text(text, (x + 1, 270 + 1), fontsize=25, color='black')
+            screen.draw.text(text, (x + 2, 270 + 1), fontsize=25, color='black')
             screen.draw.text(text, (x, 270), fontsize=25, color=color)
         arrow_x = 255 + selected_confirm * 150 - 15
         arrow_y = 268
-        screen.draw.text('>', (arrow_x, arrow_y), fontsize=25, color='gray')
+        screen.draw.text('>', (arrow_x+2, arrow_y+1), fontsize=25, color='black')
+        screen.draw.text('>', (arrow_x, arrow_y), fontsize=25, color='red')
 
 
     # game 
@@ -722,12 +745,12 @@ def draw():
         if explosion.explode:
             explosion.draw()
 
-        #--------------------
+#------------------------------------------------------------------------------
         # SCREEN HUD
         for life_point in player.current_life:
             life_point.draw()
         
-        # screen.draw.text(str(player.life), (60, 40), fontsize=40, color="red")
+        # screen.draw.text(str(player.life), (60, 40), fontsize=40, color="red") # FOR DEBUG
         # reload time bar 
         if gun.reloading:
             screen.draw.filled_rect(Rect((gun.x - gun.width/2, gun.y - 20), (gun.reload_time/3, 5)), ('gray'))
@@ -737,15 +760,33 @@ def draw():
         
         # exibition of ammo value 
         screen.draw.text(str(gun.ammo), (WIDTH - 60, HEIGHT - 40), fontsize=40, color="black")
-        #screen.draw.text(str(player.life), (0,0), fontsize=60, color="gray")
 
         # exibition of stamin bar           X                                Y                            W         H        COLOR
         screen.draw.filled_rect(Rect((player.x - player.width / 4, player.y - player.height + 20), (player.stamin/2, 5)), (200, 150, 0))
         screen.draw.rect(Rect((player.x - player.width / 4, player.y - player.height + 20), (player.max_stamin/2, 5)), (200, 150, 0))
         
+    if state == 'paused':
+        # background confirm windown
+        screen.draw.filled_rect(Rect((int(WIDTH*.25 - 5), int(HEIGHT*.25 - 5)), (WIDTH*.5 + 10, HEIGHT*.5 + 10)), (0, 0, 0))
+        screen.draw.filled_rect(Rect((int(WIDTH*.25), int(HEIGHT*.25)), (WIDTH*.5, HEIGHT*.5)), (100, 100, 100))
+        
+        # confirm windown title
+        screen.draw.text('PAUSE', center=(WIDTH/2+2, HEIGHT/2 - 69), fontsize=25, color='black')
+        screen.draw.text('PAUSE', center=(WIDTH/2, HEIGHT/2 - 70), fontsize=25, color='gray')
+
+        # show pause menu options
+        for i, text in enumerate(pause_menu_options):
+            y = 240 + i * 30
+            color = 'red' if i == selected_option else ('gray')
+            screen.draw.text(text, (WIDTH * 0.42 + 2, y + 1), fontsize=25, color='black')
+            screen.draw.text(text, (WIDTH * 0.42, y), fontsize=25, color=color)
+        arrow_x = WIDTH * 0.42 - 15
+        arrow_y = 240 + selected_option * 30
+        screen.draw.text('>', (arrow_x+2, arrow_y+1), fontsize=25, color='black')
+        screen.draw.text('>', (arrow_x, arrow_y), fontsize=25, color='red')
         
 
-    # GAME OVER SCREEN
+# GAME OVER SCREEN ------------------------------------------------------------
     if state == 'game_over':
         screen.clear()
 
