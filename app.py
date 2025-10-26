@@ -15,13 +15,15 @@ ground = HEIGHT - 16
 # for menu's
 state = 'menu'
 actual_state = 'menu' # for back screen more used for confirmation function
-menu_options = ["START GAME", "SOUND: ON", "EXIT"]
-pause_menu_options = ["CONTINUE", "SOUND: ON", 'QUIT GAME']
+menu_options = ["START GAME", "MUSIC: ON", "SOUND: ON", "EXIT"]
+pause_menu_options = ["CONTINUE", "MUSIC: ON", "SOUND: ON", 'QUIT GAME']
 confirm_options = ['YES', 'NO']
 cutscene = False
 game_over_timer = 100
 selected_option = 0
 selected_confirm = 0
+music_on = True
+sounds_on = True
 
 # for block double input
 input_blocker = False
@@ -166,7 +168,7 @@ def damaged():
 
 # when key is pressed ------------------------------------------------
 def on_key_down(key):
-    global selected_option, selected_confirm, confirm_options, menu_options, state, actual_state, input_blocker
+    global selected_option, selected_confirm, confirm_options, menu_options, state, actual_state, input_blocker, music_on, sounds_on
 
 # MENU CONFIGS --------------------------------------------------------
     if state == 'menu':
@@ -183,6 +185,13 @@ def on_key_down(key):
 
             if 'START GAME' in option:
                 state = 'playing'
+            
+            if 'MUSIC: ON' in option:
+                music_on = not music_on
+                print('music', music_on)
+
+            if 'SOUND: ON' in option:
+                print('som')
 
             if 'EXIT' in option:
                 actual_state = 'menu'
@@ -249,6 +258,10 @@ def on_key_down(key):
             if 'CONTINUE' in option:
                 state = 'playing'
 
+            if 'MUSIC: ON' in option:
+                music_on = not music_on
+                print('music', music_on)
+                
             if 'SOUND: ON' in option:
                 print('SOM')
 
@@ -272,7 +285,7 @@ def on_key_up(key):
 get_player_life(player)
 
 def update():
-    global cutscene, state, game_over_timer, input_blocker, blocker_count
+    global cutscene, state, game_over_timer, input_blocker, blocker_count, music_on
 
     if state == 'game_over':
         return
@@ -284,7 +297,29 @@ def update():
             input_blocker = False
             blocker_count = 0
 
+    if state == 'menu':
+        if music_on:
+            sounds.kubbi.play()
+            sounds.kubbi.set_volume(.1)
+        else:
+            sounds.kubbi.stop()
+
+    if state == 'paused':
+        if music_on:
+            sounds.maze.play()
+        else:
+            sounds.maze.stop()
+        return
+
     if state == 'playing':
+
+        if music_on:
+            sounds.kubbi.stop()
+            sounds.maze.play()
+            sounds.maze.set_volume(.1)
+        else:
+            sounds.maze.stop()
+
 ### WORLD ACTIONS ----------------------------------------
         # gravity actions
         if get_base(player) < ground:
@@ -648,14 +683,6 @@ def update():
                     boss.steps = boss.actual_steps
                     boss.atk_timer = 0
                     boss.clock = 0
-
-
-""" TEST 
-    rand = randint(0, 50)
-    if rand == 20:
-        missile.x = randint(50, 450)
-        print('atacou')
-"""
 
 
 ### DRAW SPRITES ----------------------------------------
