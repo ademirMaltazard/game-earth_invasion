@@ -17,6 +17,7 @@ state = 'menu'
 actual_state = 'menu' # for back screen more used for confirmation function
 menu_options = ["START GAME", "MUSIC: ON", "SOUND: ON", "EXIT"]
 pause_menu_options = ["CONTINUE", "MUSIC: ON", "SOUND: ON", 'QUIT GAME']
+game_over_options = ["TRY AGAIN", "MENU", 'QUIT GAME']
 confirm_options = ['YES', 'NO']
 cutscene = False
 game_over_timer = 100
@@ -33,7 +34,7 @@ blocker_count = 0
 player = Actor('player_r_idle_0')
 player.x = 50
 player.y = HEIGHT - player.height * 2
-player.max_life = 5
+player.max_life = 3
 player.life = player.max_life
 player.current_life = []
 player.invencible_timer = 200
@@ -173,6 +174,7 @@ def on_key_down(key):
 # MENU CONFIGS --------------------------------------------------------
     if state == 'menu':
         if input_blocker:
+            print('menu ', selected_option)
             return
         
         if key == keys.UP or key == keys.W:
@@ -197,7 +199,6 @@ def on_key_down(key):
                 actual_state = 'menu'
                 input_blocker = True
                 state = 'confirm_exit'
-                selected_option = 0
     
 # CONFIRM SCREEN CONFIGS --------------------------------------
     if state == 'confirm_exit':
@@ -221,7 +222,6 @@ def on_key_down(key):
         if key == keys.ESCAPE:
             state = actual_state
             input_blocker = True
-            selected_option = 0
 
 # GAME CONFIGS ---------------------------------------------
     if state == 'playing':
@@ -241,7 +241,6 @@ def on_key_down(key):
         if key == keys.ESCAPE:
             state = 'paused'
             actual_state = 'playing'
-            ### TO DO MENU OPTIONS ###
 
     if state == 'paused':
         if input_blocker:
@@ -268,7 +267,30 @@ def on_key_down(key):
             if 'QUIT GAME' in option:
                 actual_state = 'paused'
                 state = 'confirm_exit'
-                selected_option = 0
+
+    if state == 'game_over':
+        if input_blocker:
+            return
+        
+        if key == keys.UP or key == keys.W:
+            selected_option = (selected_option - 1) % len(game_over_options)
+        if key == keys.DOWN or key == keys.S:
+            selected_option = (selected_option + 1) % len(game_over_options)
+    
+        if key == keys.RETURN:
+            option = game_over_options[selected_option]
+
+            if 'TRY AGAIN' in option:
+                state = 'playing'
+
+            if 'MENU' in option:
+                input_blocker = True
+                state = 'menu'
+
+            if 'QUIT GAME' in option:
+                actual_state = 'game_over'
+                input_blocker = True
+                state = 'confirm_exit'
 
 
 # when key is released -------------------------------------------
@@ -285,20 +307,19 @@ def on_key_up(key):
 get_player_life(player)
 
 def update():
-    global cutscene, state, game_over_timer, input_blocker, blocker_count, music_on
+    global cutscene, state, game_over_timer, input_blocker, blocker_count, music_on, selected_option
 
-    if state == 'game_over':
-        return
-    
+
     if input_blocker:
         blocker_count += 1
-        if blocker_count > 15:  # cerca de 0.25s
-            print(input_blocker)
+        selected_option = 0
+        if blocker_count > 15:
             input_blocker = False
             blocker_count = 0
-
-    if state == 'menu':
+    
+    if state == 'menu' or state == 'game_over':
         if music_on:
+            sounds.maze.stop()
             sounds.kubbi.play()
             sounds.kubbi.set_volume(.1)
         else:
@@ -492,10 +513,12 @@ def update():
                 if bullet.is_fired: boss.life -= bullet.damage
                 bullet.is_fired = False
 
+            # verify collision bullet -> mouth 
             if bullet.colliderect(get_hitbox(boss, boss.mouth)):
                 if boss.acid_atk == 4 and bullet.is_fired: boss.life -= bullet.damage * 2
                 bullet.is_fired = False
 
+            # verify collision bullet -> body 
             if bullet.colliderect(get_hitbox(boss, boss.body)):
                 bullet.is_fired = False
             
@@ -818,12 +841,18 @@ def draw():
         screen.clear()
 
         screen.draw.filled_rect(Rect((0, 0), (WIDTH, HEIGHT)), (100, 100, 100))
-        screen.draw.filled_rect(Rect((0, 160), (WIDTH, 10)), (200, 0, 0))
-        screen.draw.text('GAME OVER', (WIDTH * 0.32 + 2, 232), fontsize=60, color="gray")
-        screen.draw.text('GAME OVER', (WIDTH * 0.32, 230), fontsize=60, color="black")
-        screen.draw.filled_rect(Rect((0, 320), (WIDTH, 10)), (200, 0, 0))
+        screen.draw.filled_rect(Rect((0, 140), (WIDTH, 10)), (200, 0, 0))
+        screen.draw.text('GAME OVER', (WIDTH * 0.32 + 2, 160), fontsize=60, color="gray")
+        screen.draw.text('GAME OVER', (WIDTH * 0.32, 162), fontsize=60, color="black")
+        screen.draw.filled_rect(Rect((0, 210), (WIDTH, 10)), (200, 0, 0))
 
-#        screen.draw.text('press ENTER to reset', (WIDTH * 0.2 + 1, 350), fontsize=20, color= 'red')
-        screen.draw.text('press ENTER to menu', (WIDTH * 0.2, 350), fontsize=25, color= 'black')
-        screen.draw.text('press ESC to exit', (WIDTH * 0.2, 370), fontsize=25, color=(0,0,0))
-#        screen.draw.text('press ESC to exit', (WIDTH * 0.2, 370), fontsize=20, color=(0,0,0))
+#       # show menu option
+        for i, text in enumerate(game_over_options):
+            y = 250 + i * 30
+            color = 'red' if i == selected_option else ('gray')
+            screen.draw.text(text, (WIDTH * 0.2 + 2, y + 1), fontsize=25, color='black')
+            screen.draw.text(text, (WIDTH * 0.2, y), fontsize=25, color=color)
+        arrow_x = WIDTH * 0.2 - 15
+        arrow_y = 250 + selected_option * 30
+        screen.draw.text('>', (arrow_x+2, arrow_y+1), fontsize=25, color='black')
+        screen.draw.text('>', (arrow_x, arrow_y), fontsize=25, color='red')
