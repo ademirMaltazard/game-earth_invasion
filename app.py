@@ -34,7 +34,7 @@ blocker_count = 0
 player = Actor('player_r_idle_0')
 player.x = 50
 player.y = HEIGHT - player.height * 2
-player.max_life = 3
+player.max_life = 1
 player.life = player.max_life
 player.current_life = []
 player.invencible_timer = 200
@@ -133,6 +133,15 @@ def animate(anim):
     
 # get functions
 
+def get_music():
+    if music_on:
+        if state == 'playing' or state == 'paused':
+            music.play('kubbi')
+        else:
+            music.play('maze')
+    else:
+        music.stop()
+
 def get_hitbox(actor, hitbox):
     return Rect(
         actor.x - hitbox['desloc_x'],                 # deslocamento horizontal da posição
@@ -178,8 +187,10 @@ def on_key_down(key):
             return
         
         if key == keys.UP or key == keys.W:
+            if sounds_on: sounds.switch.play()
             selected_option = (selected_option - 1) % len(menu_options)
         if key == keys.DOWN or key == keys.S:
+            if sounds_on: sounds.switch.play()
             selected_option = (selected_option + 1) % len(menu_options)
     
         if key == keys.RETURN:
@@ -187,15 +198,18 @@ def on_key_down(key):
 
             if 'START GAME' in option:
                 state = 'playing'
+                get_music()
             
             if 'MUSIC: ON' in option:
                 music_on = not music_on
-                print('music', music_on)
+                get_music()
 
             if 'SOUND: ON' in option:
+                sounds_on = not sounds_on
                 print('som')
 
             if 'EXIT' in option:
+                if sounds_on: sounds.maximize.play()
                 actual_state = 'menu'
                 input_blocker = True
                 state = 'confirm_exit'
@@ -206,8 +220,10 @@ def on_key_down(key):
             return
         
         if key == keys.LEFT or key == keys.A:
+            if sounds_on: sounds.switch.play()
             selected_confirm = (selected_confirm - 1) % len(confirm_options)
         if key == keys.RIGHT or key == keys.D:
+            if sounds_on: sounds.switch.play()
             selected_confirm = (selected_confirm + 1) % len(confirm_options)
 
         if key == keys.RETURN:
@@ -216,10 +232,12 @@ def on_key_down(key):
             if 'YES' in option:
                 exit()
             if 'NO' in option:
+                if sounds_on: sounds.minimize.play()
                 state = actual_state
                 input_blocker = True
         
         if key == keys.ESCAPE:
+            if sounds_on: sounds.minimize.play()
             state = actual_state
             input_blocker = True
 
@@ -239,6 +257,7 @@ def on_key_down(key):
                 player.is_firing = True
             
         if key == keys.ESCAPE:
+            if sounds_on: sounds.maximize.play()
             state = 'paused'
             actual_state = 'playing'
 
@@ -247,21 +266,25 @@ def on_key_down(key):
             return
 
         if key == keys.UP or key == keys.W:
+            if sounds_on: sounds.switch.play()
             selected_option = (selected_option - 1) % len(pause_menu_options)
         if key == keys.DOWN or key == keys.S:
+            if sounds_on: sounds.switch.play()
             selected_option = (selected_option + 1) % len(pause_menu_options)
     
         if key == keys.RETURN:
             option = pause_menu_options[selected_option]
 
             if 'CONTINUE' in option:
+                if sounds_on: sounds.minimize.play()
                 state = 'playing'
 
             if 'MUSIC: ON' in option:
                 music_on = not music_on
-                print('music', music_on)
+                get_music()
                 
             if 'SOUND: ON' in option:
+                sounds_on = not sounds_on
                 print('SOM')
 
             if 'QUIT GAME' in option:
@@ -273,8 +296,10 @@ def on_key_down(key):
             return
         
         if key == keys.UP or key == keys.W:
+            if sounds_on: sounds.switch.play()
             selected_option = (selected_option - 1) % len(game_over_options)
         if key == keys.DOWN or key == keys.S:
+            if sounds_on: sounds.switch.play()
             selected_option = (selected_option + 1) % len(game_over_options)
     
         if key == keys.RETURN:
@@ -288,6 +313,7 @@ def on_key_down(key):
                 state = 'menu'
 
             if 'QUIT GAME' in option:
+                if sounds_on: sounds.maximize.play()
                 actual_state = 'game_over'
                 input_blocker = True
                 state = 'confirm_exit'
@@ -305,6 +331,9 @@ def on_key_up(key):
             player.is_firing = False
 
 get_player_life(player)
+music.play('maze')
+music.set_volume(0.5)
+
 
 def update():
     global cutscene, state, game_over_timer, input_blocker, blocker_count, music_on, selected_option
@@ -316,31 +345,8 @@ def update():
         if blocker_count > 15:
             input_blocker = False
             blocker_count = 0
-    
-    if state == 'menu' or state == 'game_over':
-        if music_on:
-            sounds.maze.stop()
-            sounds.kubbi.play()
-            sounds.kubbi.set_volume(.1)
-        else:
-            sounds.kubbi.stop()
-
-    if state == 'paused':
-        if music_on:
-            sounds.maze.play()
-        else:
-            sounds.maze.stop()
-        return
 
     if state == 'playing':
-
-        if music_on:
-            sounds.kubbi.stop()
-            sounds.maze.play()
-            sounds.maze.set_volume(.1)
-        else:
-            sounds.maze.stop()
-
 ### WORLD ACTIONS ----------------------------------------
         # gravity actions
         if get_base(player) < ground:
@@ -437,6 +443,8 @@ def update():
             game_over_timer -= 1
             if game_over_timer == 0:
                 state = 'game_over'
+                if sounds_on: sounds.game_over.play()
+                get_music()
 
 
         # verify colission player -> missile
