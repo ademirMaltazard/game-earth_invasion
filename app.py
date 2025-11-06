@@ -34,7 +34,7 @@ blocker_count = 0
 player = Actor('player_r_idle_0')
 player.x = 50
 player.y = HEIGHT - player.height * 2
-player.max_life = 1
+player.max_life = 2
 player.life = player.max_life
 player.current_life = []
 player.invencible_timer = 200
@@ -176,6 +176,41 @@ def damaged():
                 player.is_invencible = True
                 break           
 
+def restart_game():
+    global game_over_timer
+    game_over_timer = 100
+
+    # player
+    player.x = 50
+    player.y = HEIGHT - player.height * 2
+    player.life = player.max_life
+    player.current_life = []
+    player.is_invencible = False
+    player.is_damaged = False
+    player.running = False
+    player.direction = 'right'
+    get_player_life(player)
+
+    # gun
+    gun.bullets = []
+    gun.bullet_timer = 0
+    gun.max_ammo = 30
+    gun.ammo = 30
+
+    # boss
+    boss.x = WIDTH/2
+    boss.y = -50
+    boss.alive = False
+    boss.life = boss.max_life
+    boss.steps = .5
+    boss.actual_step = 0
+    boss.clock = 0
+
+    # missile
+    missile.x = 0
+    missile.y = boss.y
+    missile.is_fired = False
+
 # when key is pressed ------------------------------------------------
 def on_key_down(key):
     global selected_option, selected_confirm, confirm_options, menu_options, state, actual_state, input_blocker, music_on, sounds_on
@@ -183,7 +218,6 @@ def on_key_down(key):
 # MENU CONFIGS --------------------------------------------------------
     if state == 'menu':
         if input_blocker:
-            print('menu ', selected_option)
             return
         
         if key == keys.UP or key == keys.W:
@@ -194,9 +228,11 @@ def on_key_down(key):
             selected_option = (selected_option + 1) % len(menu_options)
     
         if key == keys.RETURN:
+            if sounds_on: sounds.confirmation.play()
             option = menu_options[selected_option]
 
             if 'START GAME' in option:
+                restart_game()
                 state = 'playing'
                 get_music()
             
@@ -227,6 +263,7 @@ def on_key_down(key):
             selected_confirm = (selected_confirm + 1) % len(confirm_options)
 
         if key == keys.RETURN:
+            if sounds_on: sounds.confirmation.play()
             option = confirm_options[selected_confirm]
 
             if 'YES' in option:
@@ -273,6 +310,7 @@ def on_key_down(key):
             selected_option = (selected_option + 1) % len(pause_menu_options)
     
         if key == keys.RETURN:
+            if sounds_on: sounds.confirmation.play()
             option = pause_menu_options[selected_option]
 
             if 'CONTINUE' in option:
@@ -303,10 +341,13 @@ def on_key_down(key):
             selected_option = (selected_option + 1) % len(game_over_options)
     
         if key == keys.RETURN:
+            if sounds_on: sounds.confirmation.play()
             option = game_over_options[selected_option]
 
             if 'TRY AGAIN' in option:
+                restart_game()
                 state = 'playing'
+                get_music()
 
             if 'MENU' in option:
                 input_blocker = True
@@ -330,7 +371,6 @@ def on_key_up(key):
         if key == keys.RETURN:
             player.is_firing = False
 
-get_player_life(player)
 music.play('maze')
 music.set_volume(0.5)
 
@@ -426,8 +466,6 @@ def update():
                 player.x -= 10
 
         if player.is_invencible:
-            print(player.invencible_timer)
-
             player.invencible_timer -= 1
             if player.invencible_timer == 0:
                 print('pode morrer')
@@ -460,7 +498,7 @@ def update():
                 missile.is_fired = False
                 player.is_damaged = True
         
-        if get_hitbox(player, player.hitbox).colliderect(get_hitbox(boss, boss.left_tentacle)) or get_hitbox(player, player.hitbox).colliderect(get_hitbox(boss, boss.right_tentacle)):
+        if get_hitbox(player, player.hitbox).colliderect(get_hitbox(boss, boss.left_tentacle)) or get_hitbox(player, player.hitbox).colliderect(get_hitbox(boss, boss.right_tentacle)) or get_hitbox(player, player.hitbox).colliderect(get_hitbox(boss, boss.acid)):
             if player.is_invencible == False:
                 damaged()
                 player.is_damaged =True
@@ -548,8 +586,7 @@ def update():
             cutscene = True
             boss.y += 1
         
-        if boss.y == 140:
-            boss.alive = True
+        if boss.y == 140: boss.alive = True
 
         if boss.alive:
             cutscene = False
