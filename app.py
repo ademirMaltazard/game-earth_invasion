@@ -15,8 +15,7 @@ ground = HEIGHT - 16
 # for menu's
 state = 'menu'
 actual_state = 'menu' # for back screen more used for confirmation function
-menu_options = ["START GAME", "MUSIC: ON", "SOUND: ON", "EXIT"]
-pause_menu_options = ["CONTINUE", "MUSIC: ON", "SOUND: ON", 'QUIT GAME']
+menu_options = ["START GAME", "MUSIC: ON", "SOUND: ON", "QUIT GAME"]
 game_over_options = ["TRY AGAIN", "MENU", 'QUIT GAME']
 confirm_options = ['YES', 'NO']
 cutscene = False
@@ -216,7 +215,7 @@ def on_key_down(key):
     global selected_option, selected_confirm, confirm_options, menu_options, state, actual_state, input_blocker, music_on, sounds_on
 
 # MENU CONFIGS --------------------------------------------------------
-    if state == 'menu':
+    if state == 'menu' or state == 'paused':
         if input_blocker:
             return
         
@@ -235,14 +234,20 @@ def on_key_down(key):
                 restart_game()
                 state = 'playing'
                 get_music()
+
+            if 'CONTINUE' in option:
+                if sounds_on: sounds.minimize.play()
+                menu_options[0] = 'START GAME'
+                state = 'playing'
             
-            if 'MUSIC: ON' in option:
+            if 'MUSIC: ON' in option or 'MUSIC: OFF' in option:
                 music_on = not music_on
+                menu_options[1] = 'MUSIC: ON' if music_on else 'MUSIC: OFF'
                 get_music()
 
-            if 'SOUND: ON' in option:
+            if 'SOUND: ON' in option or 'SOUND: OFF' in option:
                 sounds_on = not sounds_on
-                print('som')
+                menu_options[2] = 'SOUND: ON' if sounds_on else 'SOUND: OFF'
 
             if 'EXIT' in option:
                 if sounds_on: sounds.maximize.play()
@@ -295,39 +300,10 @@ def on_key_down(key):
             
         if key == keys.ESCAPE:
             if sounds_on: sounds.maximize.play()
+            menu_options[0] = 'CONTINUE'
             state = 'paused'
             actual_state = 'playing'
 
-    if state == 'paused':
-        if input_blocker:
-            return
-
-        if key == keys.UP or key == keys.W:
-            if sounds_on: sounds.switch.play()
-            selected_option = (selected_option - 1) % len(pause_menu_options)
-        if key == keys.DOWN or key == keys.S:
-            if sounds_on: sounds.switch.play()
-            selected_option = (selected_option + 1) % len(pause_menu_options)
-    
-        if key == keys.RETURN:
-            if sounds_on: sounds.confirmation.play()
-            option = pause_menu_options[selected_option]
-
-            if 'CONTINUE' in option:
-                if sounds_on: sounds.minimize.play()
-                state = 'playing'
-
-            if 'MUSIC: ON' in option:
-                music_on = not music_on
-                get_music()
-                
-            if 'SOUND: ON' in option:
-                sounds_on = not sounds_on
-                print('SOM')
-
-            if 'QUIT GAME' in option:
-                actual_state = 'paused'
-                state = 'confirm_exit'
 
     if state == 'game_over':
         if input_blocker:
@@ -870,7 +846,7 @@ def draw():
         screen.draw.text('PAUSE', center=(WIDTH/2, HEIGHT/2 - 70), fontsize=25, color='gray')
 
         # show pause menu options
-        for i, text in enumerate(pause_menu_options):
+        for i, text in enumerate(menu_options):
             y = 240 + i * 30
             color = 'red' if i == selected_option else ('gray')
             screen.draw.text(text, (WIDTH * 0.42 + 2, y + 1), fontsize=25, color='black')
