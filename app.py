@@ -1,6 +1,6 @@
 from os import environ
 import pgzrun
-from random import randint
+from random import randint, choice
 
 WIDTH = 700
 HEIGHT = 500
@@ -24,6 +24,7 @@ selected_option = 0
 selected_confirm = 0
 music_on = True
 sounds_on = True
+dialog_on = False
 
 # for block double input
 input_blocker = False
@@ -49,13 +50,14 @@ player.jump_timer = 0
 player.jump_height = 90
 player.jump_force = 10
 player.direction = 'right'
+player.step_sound = True
 player.hitbox = {'desloc_x' : 15, 'desloc_y': 26, 'width': 30, 'height': 55}
 player.anim_r_idle = {'play': True,'repeat': True, 'index': -1, 'change': 10, 'timer': 0, 'frames': [ 'player_r_idle_1','player_r_idle_0', 'player_r_idle_0', 'player_r_idle_1', 'player_r_idle_2', 'player_r_idle_2']}
 player.anim_l_idle = {'play': True,'repeat': True, 'index': -1, 'change': 10, 'timer': 0, 'frames': [ 'player_l_idle_1','player_l_idle_0', 'player_l_idle_0', 'player_l_idle_1', 'player_l_idle_2', 'player_l_idle_2']}
-player.anim_r_walk = {'play': True,'repeat': True, 'index': -1, 'change': 10, 'timer': 0, 'frames': ['r_walk_0', 'r_walk_1', 'r_walk_2', 'r_walk_3', 'r_walk_4', 'r_walk_5', 'r_walk_6', 'r_walk_7']}
-player.anim_r_firing = {'play': True,'repeat': True, 'index': -1, 'change': 10, 'timer': 0, 'frames': ['r_firing_0', 'r_firing_1', 'r_firing_2', 'r_firing_3', 'r_firing_4', 'r_firing_5', 'r_firing_6', 'r_firing_7']}
-player.anim_l_walk = {'play': True,'repeat': True, 'index': -1, 'change': 10, 'timer': 0, 'frames': ['l_walk_0', 'l_walk_1', 'l_walk_2', 'l_walk_3', 'l_walk_4', 'l_walk_5', 'l_walk_6', 'l_walk_7']}
-player.anim_l_firing = {'play': True,'repeat': True, 'index': -1, 'change': 10, 'timer': 0, 'frames': ['l_firing_0', 'l_firing_1', 'l_firing_2', 'l_firing_3', 'l_firing_4', 'l_firing_5', 'l_firing_6', 'l_firing_7']}
+player.anim_r_walk = {'play': True,'repeat': True, 'index': -1, 'change': 8, 'timer': 0, 'frames': ['r_walk_0', 'r_walk_1', 'r_walk_2', 'r_walk_3', 'r_walk_4', 'r_walk_5', 'r_walk_6', 'r_walk_7']}
+player.anim_r_firing = {'play': True,'repeat': True, 'index': -1, 'change': 8, 'timer': 0, 'frames': ['r_firing_0', 'r_firing_1', 'r_firing_2', 'r_firing_3', 'r_firing_4', 'r_firing_5', 'r_firing_6', 'r_firing_7']}
+player.anim_l_walk = {'play': True,'repeat': True, 'index': -1, 'change': 8, 'timer': 0, 'frames': ['l_walk_0', 'l_walk_1', 'l_walk_2', 'l_walk_3', 'l_walk_4', 'l_walk_5', 'l_walk_6', 'l_walk_7']}
+player.anim_l_firing = {'play': True,'repeat': True, 'index': -1, 'change': 8, 'timer': 0, 'frames': ['l_firing_0', 'l_firing_1', 'l_firing_2', 'l_firing_3', 'l_firing_4', 'l_firing_5', 'l_firing_6', 'l_firing_7']}
 
 # GUN CONFIGS
 gun = Actor('gun')
@@ -64,7 +66,7 @@ gun.y = HEIGHT - 30
 gun.bullets = []
 gun.bullet_timer = 0
 gun.reloading = False
-gun.reload_time = 100
+gun.reload_time = 150
 gun.max_ammo = 30
 gun.ammo = 30
 
@@ -74,7 +76,7 @@ fire.anim = {'play': True, 'repeat': False, 'index': 1, 'change': 2, 'timer': 0,
         
 
 # BOSS CONFIGS
-boss = Actor('boss')
+boss = Actor('boss_body')
 boss.x = WIDTH/2
 boss.y = -50
 boss.alive = False
@@ -90,13 +92,20 @@ boss.acid_atk = False
 boss.atack_rate = 350
 boss.clock = 0
 boss.atk_timer = 0
-boss.body = {'desloc_x' : 100, 'desloc_y': 85, 'width': 200, 'height': 100}
-boss.mouth = {'desloc_x' : 20, 'desloc_y': -10, 'width': 40, 'height': 15}
-boss.right_eye = {'desloc_x' : -30, 'desloc_y': -5, 'width': 40, 'height': 15}
-boss.left_eye = {'desloc_x' : 68, 'desloc_y': -5, 'width': 40, 'height': 15}
-boss.right_tentacle = {'desloc_x' : -68, 'desloc_y': -30, 'width': 60, 'height': 60}
-boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -30, 'width': 60, 'height': 60}
-boss.acid = {'desloc_x' : 20, 'desloc_y': -10, 'width': 40, 'height': 15}
+boss.body = {'desloc_x' : 100, 'desloc_y': 35, 'width': 200, 'height': 100}
+boss.mouth = {'desloc_x' : 20, 'desloc_y': -60, 'width': 40, 'height': 15}
+boss.right_eye = {'desloc_x' : -30, 'desloc_y': -55, 'width': 40, 'height': 15}
+boss.left_eye = {'desloc_x' : 68, 'desloc_y': -55, 'width': 40, 'height': 15}
+boss.right_tentacle = {'desloc_x' : -68, 'desloc_y': -80, 'width': 60, 'height': 60}
+boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -80, 'width': 60, 'height': 60}
+boss.acid = {'desloc_x' : 20, 'desloc_y': -60, 'width': 40, 'height': 15}
+
+r_tentacle = Actor('r_tentacle_0')
+r_tentacle.x = boss.x + 70
+r_tentacle.y = boss.y + 83
+l_tentacle = Actor('l_tentacle_0')
+l_tentacle.x = boss.x - 70
+l_tentacle.y = boss.y + 83
 
 # BOSS SHOOT CONFIGS
 missile = Actor('missile_0')
@@ -168,16 +177,30 @@ def get_player_life(player):
         player.current_life.append(life_point)
 
 def damaged():
-        for life_point in reversed(player.current_life):
-            if life_point.hit == False:
-                life_point.hit = True
-                player.life -= 1
-                player.is_invencible = True
-                break           
+    for life_point in reversed(player.current_life):
+        if life_point.hit == False:
+            life_point.hit = True
+            player.life -= 1
+            player.is_invencible = True
+            break
+
+def sound_step():
+    print(player.step_sound)
+    if player.image == 'r_walk_1' or player.image == 'l_walk_1':
+        if player.step_sound:
+            sounds.footstep_01.play()
+            player.step_sound = False
+    elif player.image == 'r_walk_4'or player.image == 'l_walk_4':
+        if player.step_sound:
+            sounds.footstep_02.play()
+            player.step_sound = False
+    else:
+        player.step_sound = True
 
 def restart_game():
-    global game_over_timer
+    global game_over_timer, dialog_on
     game_over_timer = 100
+    dialog_on = False
 
     # player
     player.x = 50
@@ -249,7 +272,7 @@ def on_key_down(key):
                 sounds_on = not sounds_on
                 menu_options[2] = 'SOUND: ON' if sounds_on else 'SOUND: OFF'
 
-            if 'EXIT' in option:
+            if 'QUIT GAME' in option:
                 if sounds_on: sounds.maximize.play()
                 actual_state = 'menu'
                 input_blocker = True
@@ -291,11 +314,12 @@ def on_key_down(key):
                 player.speed = 4
 
             # Reolad ammo
-            if key == keys.R:
+            if key == keys.R and (gun.reloading == False) and gun.ammo < gun.max_ammo:
+                sounds.reload.play()
                 gun.reloading = True
             
             # 13 = ENTER BUTTON for fire
-            if key == 13 and keyboard.w:
+            if key == keys.RETURN and (keyboard.w or keyboard.up):
                 player.is_firing = True
             
         if key == keys.ESCAPE:
@@ -347,12 +371,10 @@ def on_key_up(key):
         if key == keys.RETURN:
             player.is_firing = False
 
-music.play('maze')
-music.set_volume(0.5)
-
+get_music()
 
 def update():
-    global cutscene, state, game_over_timer, input_blocker, blocker_count, music_on, selected_option
+    global cutscene, state, game_over_timer, input_blocker, blocker_count, music_on, selected_option, dialog_on
 
 
     if input_blocker:
@@ -375,6 +397,11 @@ def update():
         if get_base(player) > ground:
             player.y = ground - player.height / 2
 
+        if player.x > WIDTH - 25:
+            player.x = WIDTH - 25
+        if player.x < 25:
+            player.x = 25
+
 ### PLAYER ACTIONS ----------------------------------------
         if cutscene == False:
             # left and right
@@ -383,11 +410,14 @@ def update():
                 player.image = animate(player.anim_r_walk)
                 player.x += player.speed
                 fire.x += player.speed
+                sound_step()
+
             if (keyboard.left  or keyboard.a) and player.x > 25:
                 player.direction = 'left'
                 player.image = animate(player.anim_l_walk)
                 player.x -= player.speed
                 fire.x -= player.speed
+                sound_step()
 
             # aim
             if keyboard.w or keyboard.up:
@@ -473,10 +503,13 @@ def update():
                 missile.x = 0
                 missile.is_fired = False
                 player.is_damaged = True
+
         
         if get_hitbox(player, player.hitbox).colliderect(get_hitbox(boss, boss.left_tentacle)) or get_hitbox(player, player.hitbox).colliderect(get_hitbox(boss, boss.right_tentacle)) or get_hitbox(player, player.hitbox).colliderect(get_hitbox(boss, boss.acid)):
             if player.is_invencible == False:
                 damaged()
+                sound = choice([sounds.ouch_01, sounds.ouch_02])
+                sound.play()
                 player.is_damaged =True
 
 ### GUN AND BULLET ACTIONS -------------------
@@ -501,6 +534,7 @@ def update():
             gun.bullets.append(bullet)
             gun.bullet_timer = 0
             gun.ammo -= 1
+            sounds.shot.play()
 
         if fire.active:
             fire.image = animate(fire.anim)
@@ -514,7 +548,7 @@ def update():
             gun.reload_time -= 1
             if gun.reload_time <= 0:
                 gun.ammo = gun.max_ammo
-                gun.reload_time = 100
+                gun.reload_time = 150
                 gun.reloading = False
                 
 
@@ -526,14 +560,11 @@ def update():
                 bullet.is_fired = False
 
             # verify collision bullet -> right eye 
-            if bullet.colliderect(get_hitbox(boss, boss.right_eye)):
+            if bullet.colliderect(get_hitbox(boss, boss.right_eye)) or bullet.colliderect(get_hitbox(boss, boss.left_eye)):
                 if bullet.is_fired: boss.life -= bullet.damage
                 bullet.is_fired = False
-            
-            # verify collision bullet -> left eye 
-            if bullet.colliderect(get_hitbox(boss, boss.left_eye)):
-                if bullet.is_fired: boss.life -= bullet.damage
-                bullet.is_fired = False
+                if boss.life <= boss.max_life/2:
+                    dialog_on = True
 
             # verify collision bullet -> mouth 
             if bullet.colliderect(get_hitbox(boss, boss.mouth)):
@@ -558,11 +589,16 @@ def update():
         gun.bullets[:] = [b for b in gun.bullets if b.is_fired]
 
 ### BOSS ACTIONS ----------------------------------------
+        if boss.y == 10:
+            sounds.dialog_01.play()
+
         if boss.alive == False and player.x > WIDTH/3 and boss.y < 140:
             cutscene = True
             boss.y += 1
+            r_tentacle.y += 1
+            l_tentacle.y += 1
         
-        if boss.y == 140: boss.alive = True
+        if boss.y == 90: boss.alive = True
 
         if boss.alive:
             cutscene = False
@@ -570,8 +606,11 @@ def update():
 
             # left and right
             boss.x += boss.steps
+            r_tentacle.x += boss.steps
+            l_tentacle.x += boss.steps
             if boss.x >= WIDTH - 140 or boss.x <= 140:
                 boss.steps = boss.steps * -1
+
             
             # boss atack
             if boss.clock == boss.atack_rate:
@@ -639,18 +678,30 @@ def update():
                 boss.atk_timer += 1
                 boss.steps = 0
                 if boss.atk_timer < 30:
-                    boss.right_tentacle = {'desloc_x' : -18, 'desloc_y': -30, 'width': 130, 'height': 80} #for defense
-                    boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -30, 'width': 130, 'height': 80}
+                    boss.right_tentacle = {'desloc_x' : -18, 'desloc_y': -80, 'width': 130, 'height': 80} #for defense
+                    r_tentacle.image = 'r_tentacle_1'
+                    r_tentacle.y = boss.y + 85
+                    boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -80, 'width': 130, 'height': 80}
+                    l_tentacle.image = 'l_tentacle_1'
+                    l_tentacle.y = boss.y + 85
                     get_hitbox(boss, boss.right_tentacle)
                 elif boss.atk_timer < 70:
-                    boss.right_tentacle = {'desloc_x' : -68, 'desloc_y': -30, 'width': 60, 'height': 300}
+                    boss.right_tentacle = {'desloc_x' : -68, 'desloc_y': -80, 'width': 60, 'height': 300}
+                    r_tentacle.image = 'r_tentacle_2'
+                    r_tentacle.y = boss.y + 217
                     get_hitbox(boss, boss.right_tentacle)
                 elif boss.atk_timer < 100:
-                    boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -30, 'width': 60, 'height': 60} #normal state
-                    boss.right_tentacle = {'desloc_x' : -18, 'desloc_y': -30, 'width': 130, 'height': 80}
+                    boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -80, 'width': 60, 'height': 60} #normal state
+                    l_tentacle.image = 'l_tentacle_0'
+                    l_tentacle.y = boss.y + 83
+                    boss.right_tentacle = {'desloc_x' : -18, 'desloc_y': -80, 'width': 130, 'height': 80}
+                    r_tentacle.image = 'r_tentacle_1'
+                    r_tentacle.y = boss.y + 85
                     get_hitbox(boss, boss.right_tentacle)
                 else:
-                    boss.right_tentacle = {'desloc_x' : -68, 'desloc_y': -30, 'width': 60, 'height': 60}
+                    boss.right_tentacle = {'desloc_x' : -68, 'desloc_y': -80, 'width': 60, 'height': 60}
+                    r_tentacle.image = 'r_tentacle_0'
+                    r_tentacle.y = boss.y + 83
                     get_hitbox(boss, boss.right_tentacle)
                     boss.r_tentacle_atk = False
                     boss.steps = boss.actual_steps
@@ -661,18 +712,30 @@ def update():
                 boss.atk_timer += 1
                 boss.steps = 0
                 if boss.atk_timer < 30:
-                    boss.right_tentacle = {'desloc_x' : -18, 'desloc_y': -30, 'width': 130, 'height': 80} #for defense
-                    boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -30, 'width': 130, 'height': 80}
+                    boss.right_tentacle = {'desloc_x' : -18, 'desloc_y': -80, 'width': 130, 'height': 80} #for defense
+                    r_tentacle.image = 'r_tentacle_1'
+                    r_tentacle.y = boss.y + 85
+                    boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -80, 'width': 130, 'height': 80}
+                    l_tentacle.image = 'l_tentacle_1'
+                    l_tentacle.y = boss.y + 85
                     get_hitbox(boss, boss.left_tentacle)
                 elif boss.atk_timer < 70:
-                    boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -30, 'width': 60, 'height': 300}
+                    boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -80, 'width': 60, 'height': 300}
+                    l_tentacle.image = 'l_tentacle_2'
+                    l_tentacle.y = boss.y + 217
                     get_hitbox(boss, boss.left_tentacle)
                 elif boss.atk_timer < 100:
-                    boss.right_tentacle = {'desloc_x' : -68, 'desloc_y': -30, 'width': 60, 'height': 60} #normal state
-                    boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -30, 'width': 130, 'height': 80}
+                    boss.right_tentacle = {'desloc_x' : -68, 'desloc_y': -80, 'width': 60, 'height': 60} #normal state
+                    r_tentacle.image = 'r_tentacle_0'
+                    r_tentacle.y = boss.y + 83
+                    boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -80, 'width': 130, 'height': 80}
+                    l_tentacle.image = 'l_tentacle_1'
+                    l_tentacle.y = boss.y + 85
                     get_hitbox(boss, boss.left_tentacle)
                 else:
-                    boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -30, 'width': 60, 'height': 60}
+                    boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -80, 'width': 60, 'height': 60}
+                    l_tentacle.image = 'l_tentacle_0'
+                    l_tentacle.y = boss.y + 83
                     get_hitbox(boss, boss.left_tentacle)
                     boss.l_tentacle_atk = False
                     boss.steps = boss.actual_steps
@@ -683,23 +746,39 @@ def update():
                 boss.atk_timer += 1
                 boss.steps = 0
                 if boss.atk_timer < 30:
-                    boss.right_tentacle = {'desloc_x' : -18, 'desloc_y': -30, 'width': 130, 'height': 80}
-                    boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -30, 'width': 130, 'height': 80}
+                    boss.right_tentacle = {'desloc_x' : -18, 'desloc_y': -80, 'width': 130, 'height': 80}
+                    r_tentacle.image = 'r_tentacle_1'
+                    r_tentacle.y = boss.y + 85
+                    boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -80, 'width': 130, 'height': 80}
+                    l_tentacle.image = 'l_tentacle_1'
+                    l_tentacle.y = boss.y + 85
                     get_hitbox(boss, boss.right_tentacle)
                     get_hitbox(boss, boss.left_tentacle)
                 elif boss.atk_timer < 70:
-                    boss.right_tentacle = {'desloc_x' : -68, 'desloc_y': -30, 'width': 60, 'height': 300}
-                    boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -30, 'width': 60, 'height': 300}
+                    boss.right_tentacle = {'desloc_x' : -68, 'desloc_y': -80, 'width': 60, 'height': 300}
+                    r_tentacle.image = 'r_tentacle_2'
+                    r_tentacle.y = boss.y + 217
+                    boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -80, 'width': 60, 'height': 300}
+                    l_tentacle.image = 'l_tentacle_2'
+                    l_tentacle.y = boss.y + 217
                     get_hitbox(boss, boss.right_tentacle)
                     get_hitbox(boss, boss.left_tentacle)
                 elif boss.atk_timer < 100:
-                    boss.right_tentacle = {'desloc_x' : -18, 'desloc_y': -30, 'width': 130, 'height': 80}
-                    boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -30, 'width': 130, 'height': 80}
+                    boss.right_tentacle = {'desloc_x' : -18, 'desloc_y': -80, 'width': 130, 'height': 80}
+                    r_tentacle.image = 'r_tentacle_1'
+                    r_tentacle.y = boss.y + 85
+                    boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -80, 'width': 130, 'height': 80}
+                    l_tentacle.image = 'l_tentacle_1'
+                    l_tentacle.y = boss.y + 85
                     get_hitbox(boss, boss.right_tentacle)
                     get_hitbox(boss, boss.left_tentacle)
                 else:
-                    boss.right_tentacle = {'desloc_x' : -68, 'desloc_y': -30, 'width': 60, 'height': 60}
-                    boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -30, 'width': 60, 'height': 60}
+                    boss.right_tentacle = {'desloc_x' : -68, 'desloc_y': -80, 'width': 60, 'height': 60}
+                    r_tentacle.image = 'r_tentacle_0'
+                    r_tentacle.y = boss.y + 83
+                    boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -80, 'width': 60, 'height': 60}
+                    l_tentacle.image = 'l_tentacle_0'
+                    l_tentacle.y = boss.y + 83
                     get_hitbox(boss, boss.right_tentacle)
                     get_hitbox(boss, boss.left_tentacle)
                     boss.dual_tentacle_atk = False
@@ -712,16 +791,16 @@ def update():
                 boss.atk_timer += 1
                 boss.steps = 0
                 if boss.atk_timer < 30:
-                    boss.acid = {'desloc_x' : 15, 'desloc_y': -10, 'width': 30, 'height': 70}
+                    boss.acid = {'desloc_x' : 15, 'desloc_y': -60, 'width': 30, 'height': 70}
                     get_hitbox(boss, boss.acid)
                 elif boss.atk_timer < 70:
-                    boss.acid = {'desloc_x' : 15, 'desloc_y': -10, 'width': 30, 'height': 150}
+                    boss.acid = {'desloc_x' : 15, 'desloc_y': -60, 'width': 30, 'height': 150}
                     get_hitbox(boss, boss.acid)
                 elif boss.atk_timer < 100:
-                    boss.acid = {'desloc_x' : 15, 'desloc_y': -10, 'width': 30, 'height': 330}
+                    boss.acid = {'desloc_x' : 15, 'desloc_y': -60, 'width': 30, 'height': 330}
                     get_hitbox(boss, boss.acid)
                 else:
-                    boss.acid = {'desloc_x' : 15, 'desloc_y': -10, 'width': 30, 'height': 15}
+                    boss.acid = {'desloc_x' : 15, 'desloc_y': -60, 'width': 30, 'height': 15}
                     get_hitbox(boss, boss.acid)
                     boss.acid_atk = False
                     boss.steps = boss.actual_steps
@@ -784,6 +863,8 @@ def draw():
         
         # boss
         boss.draw()
+        r_tentacle.draw()
+        l_tentacle.draw()
         if boss.alive:
             # boss life bar
             screen.draw.filled_rect(Rect((440, 20), (boss.life / 2, 10)), (200, 0, 0))
