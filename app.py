@@ -11,6 +11,7 @@ environ['SDL_VIDEO_CENTERED'] = '1'
 bg = Actor('background')
 gravity = 5
 ground = HEIGHT - 16
+debug = False
 
 # for menu's
 state = 'menu'
@@ -19,7 +20,6 @@ menu_options = ["START GAME", "MUSIC: ON", "SOUND: ON", "QUIT GAME"]
 game_over_options = ["TRY AGAIN", "MENU", 'QUIT GAME']
 confirm_options = ['YES', 'NO']
 cutscene = False
-game_over_timer = 100
 selected_option = 0
 selected_confirm = 0
 music_on = True
@@ -32,97 +32,131 @@ blocker_count = 0
 
 # PLAYER CONFIGS
 player = Actor('player_r_idle_0')
-player.x = 50
-player.y = HEIGHT - player.height * 2
-player.max_life = 2
-player.life = player.max_life
-player.current_life = []
-player.invencible_timer = 200
-player.is_invencible = False
-player.is_damaged = False
-player.running = False
-player.speed = 2
-player.max_stamin = 50
-player.stamin = player.max_stamin
-player.is_firing = False
-player.is_jumping = False
-player.jump_timer = 0
-player.jump_height = 90
-player.jump_force = 10
-player.direction = 'right'
-player.step_sound = True
-player.hitbox = {'desloc_x' : 15, 'desloc_y': 26, 'width': 30, 'height': 55}
-player.anim_r_idle = {'play': True,'repeat': True, 'index': -1, 'change': 10, 'timer': 0, 'frames': [ 'player_r_idle_1','player_r_idle_0', 'player_r_idle_0', 'player_r_idle_1', 'player_r_idle_2', 'player_r_idle_2']}
-player.anim_l_idle = {'play': True,'repeat': True, 'index': -1, 'change': 10, 'timer': 0, 'frames': [ 'player_l_idle_1','player_l_idle_0', 'player_l_idle_0', 'player_l_idle_1', 'player_l_idle_2', 'player_l_idle_2']}
-player.anim_r_walk = {'play': True,'repeat': True, 'index': -1, 'change': 8, 'timer': 0, 'frames': ['r_walk_0', 'r_walk_1', 'r_walk_2', 'r_walk_3', 'r_walk_4', 'r_walk_5', 'r_walk_6', 'r_walk_7']}
-player.anim_r_firing = {'play': True,'repeat': True, 'index': -1, 'change': 8, 'timer': 0, 'frames': ['r_firing_0', 'r_firing_1', 'r_firing_2', 'r_firing_3', 'r_firing_4', 'r_firing_5', 'r_firing_6', 'r_firing_7']}
-player.anim_l_walk = {'play': True,'repeat': True, 'index': -1, 'change': 8, 'timer': 0, 'frames': ['l_walk_0', 'l_walk_1', 'l_walk_2', 'l_walk_3', 'l_walk_4', 'l_walk_5', 'l_walk_6', 'l_walk_7']}
-player.anim_l_firing = {'play': True,'repeat': True, 'index': -1, 'change': 8, 'timer': 0, 'frames': ['l_firing_0', 'l_firing_1', 'l_firing_2', 'l_firing_3', 'l_firing_4', 'l_firing_5', 'l_firing_6', 'l_firing_7']}
 
-# GUN CONFIGS
+# GUN CRETOR
 gun = Actor('gun')
-gun.x = WIDTH - 80
-gun.y = HEIGHT - 30
-gun.bullets = []
-gun.bullet_timer = 0
-gun.reloading = False
-gun.reload_time = 150
-gun.max_ammo = 30
-gun.ammo = 30
 
+# SHOT FIRE CREATOR
 fire = Actor('fire_0')
 fire.active = False
 fire.anim = {'play': True, 'repeat': False, 'index': 1, 'change': 2, 'timer': 0, 'frames': ['fire_0', 'fire_1', 'fire_2', 'fire_3']}
         
-
-# BOSS CONFIGS
+# BOSS CREATOR
 boss = Actor('boss_body')
-boss.x = WIDTH/2
-boss.y = -50
-boss.alive = False
 boss.max_life = 500
-boss.life = boss.max_life
-boss.steps = .5
-boss.actual_step = 0
-boss.missile_atk = False
-boss.r_tentacle_atk = False
-boss.l_tentacle_atk = False
-boss.dual_tentacle_atk = False
-boss.acid_atk = False
-boss.atack_rate = 350
-boss.clock = 0
-boss.atk_timer = 0
-boss.body = {'desloc_x' : 100, 'desloc_y': 35, 'width': 200, 'height': 100}
-boss.mouth = {'desloc_x' : 20, 'desloc_y': -60, 'width': 40, 'height': 15}
-boss.right_eye = {'desloc_x' : -30, 'desloc_y': -55, 'width': 40, 'height': 15}
-boss.left_eye = {'desloc_x' : 68, 'desloc_y': -55, 'width': 40, 'height': 15}
-boss.right_tentacle = {'desloc_x' : -68, 'desloc_y': -80, 'width': 60, 'height': 60}
-boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -80, 'width': 60, 'height': 60}
-boss.acid = {'desloc_x' : 20, 'desloc_y': -60, 'width': 40, 'height': 15}
+boss.atack_rate = 400
 
+# BOSS ATACKS CREATORS
 r_tentacle = Actor('r_tentacle_0')
-r_tentacle.x = boss.x + 70
-r_tentacle.y = boss.y + 83
 l_tentacle = Actor('l_tentacle_0')
-l_tentacle.x = boss.x - 70
-l_tentacle.y = boss.y + 83
-
-# BOSS SHOOT CONFIGS
+acid = Actor('acid_0')
+puddle = Actor('puddle_0')
 missile = Actor('missile_0')
-missile.x = 0
-missile.y = boss.y
-missile.speed = 1
-missile.is_fired = False
-missile.hitbox = {'desloc_x' : 6.5, 'desloc_y': -3, 'width': 13, 'height': 18}
-missile.anim = {'play': True, 'repeat': True, 'index': 0, 'change': 10, 'timer': 0, 'frames': ['missile_0', 'missile_1', 'missile_2', 'missile_1']}
-
-# EXPLOSION
 explosion = Actor('explosion_0')
-explosion.x = 0
-explosion.y = 0
-explosion.explode = False
-explosion.timer = 40
-explosion.anim = {'play': True, 'repeat': False, 'index': -1, 'change': 3, 'timer': 0, 'frames': ['explosion_0', 'explosion_1', 'explosion_2', 'explosion_3', 'explosion_4', 'explosion_5', 'explosion_6','explosion_7', 'explosion_8', 'explosion_9', 'explosion_10']}
+
+def restart_game():
+    global dialog_on
+    dialog_on = False
+
+    # player
+    player.x = 50
+    player.y = HEIGHT - player.height * 2
+    player.max_life = 5
+    player.life = player.max_life
+    player.current_life = []
+    player.invencible_timer = 200
+    player.is_invencible = False
+    player.is_damaged = False
+    player.running = False
+    player.speed = 2
+    player.max_stamin = 50
+    player.stamin = player.max_stamin
+    player.is_firing = False
+    player.is_jumping = False
+    player.jump_timer = 0
+    player.jump_height = 90
+    player.jump_force = 10
+    player.direction = 'right'
+    player.step_sound = True
+    player.hitbox = {'desloc_x' : 15, 'desloc_y': 26, 'width': 30, 'height': 60}
+    player.anim_r_idle = {'play': True,'repeat': True, 'index': -1, 'change': 10, 'timer': 0, 'frames': [ 'player_r_idle_1','player_r_idle_0', 'player_r_idle_0', 'player_r_idle_1', 'player_r_idle_2', 'player_r_idle_2']}
+    player.anim_l_idle = {'play': True,'repeat': True, 'index': -1, 'change': 10, 'timer': 0, 'frames': [ 'player_l_idle_1','player_l_idle_0', 'player_l_idle_0', 'player_l_idle_1', 'player_l_idle_2', 'player_l_idle_2']}
+    player.anim_r_walk = {'play': True,'repeat': True, 'index': -1, 'change': 8, 'timer': 0, 'frames': ['r_walk_0', 'r_walk_1', 'r_walk_2', 'r_walk_3', 'r_walk_4', 'r_walk_5', 'r_walk_6', 'r_walk_7']}
+    player.anim_r_firing = {'play': True,'repeat': True, 'index': -1, 'change': 8, 'timer': 0, 'frames': ['r_firing_0', 'r_firing_1', 'r_firing_2', 'r_firing_3', 'r_firing_4', 'r_firing_5', 'r_firing_6', 'r_firing_7']}
+    player.anim_l_walk = {'play': True,'repeat': True, 'index': -1, 'change': 8, 'timer': 0, 'frames': ['l_walk_0', 'l_walk_1', 'l_walk_2', 'l_walk_3', 'l_walk_4', 'l_walk_5', 'l_walk_6', 'l_walk_7']}
+    player.anim_l_firing = {'play': True,'repeat': True, 'index': -1, 'change': 8, 'timer': 0, 'frames': ['l_firing_0', 'l_firing_1', 'l_firing_2', 'l_firing_3', 'l_firing_4', 'l_firing_5', 'l_firing_6', 'l_firing_7']}
+    get_player_life(player)
+
+    # gun
+    gun.x = WIDTH - 80
+    gun.y = HEIGHT - 30
+    gun.bullets = []
+    gun.bullet_timer = 0
+    gun.reloading = False
+    gun.reload_time = 150
+    gun.max_ammo = 30
+    gun.ammo = 30
+
+    # boss
+    boss.x = WIDTH/2
+    boss.y = -50
+    boss.life = boss.max_life
+    boss.alive = False
+    boss.steps = .5
+    boss.actual_step = 0
+    boss.sound_effect = False
+    boss.missile_atk = False
+    boss.r_tentacle_atk = False
+    boss.l_tentacle_atk = False
+    boss.dual_tentacle_atk = False
+    boss.acid_atk = False
+    boss.clock = 0
+    boss.atk_timer = 0
+    boss.body = {'desloc_x' : 100, 'desloc_y': 35, 'width': 200, 'height': 100}
+    boss.mouth = {'desloc_x' : 10, 'desloc_y': -60, 'width': 20, 'height': 15}
+    boss.right_eye = {'desloc_x' : -30, 'desloc_y': -55, 'width': 40, 'height': 15}
+    boss.left_eye = {'desloc_x' : 68, 'desloc_y': -55, 'width': 40, 'height': 15}
+    boss.right_tentacle = {'desloc_x' : -68, 'desloc_y': -80, 'width': 60, 'height': 60}
+    boss.left_tentacle = {'desloc_x' : 130, 'desloc_y': -80, 'width': 60, 'height': 60}
+    boss.acid = {'desloc_x' : 10, 'desloc_y': -60, 'width': 20, 'height': 10}
+    boss_initial_direction = randint(0, 5)
+    if boss_initial_direction == 3:
+        boss.steps = boss.steps * -1
+
+
+    # atacks
+    r_tentacle.image = 'r_tentacle_0'
+    r_tentacle.x = boss.x + 70
+    r_tentacle.y = boss.y + 83
+
+    l_tentacle.image = 'l_tentacle_0'
+    l_tentacle.x = boss.x - 70
+    l_tentacle.y = boss.y + 83
+
+    acid.image = 'acid_0'
+    acid.x = boss.x
+    acid.y = boss.y
+
+    puddle.image = 'puddle_0'
+    puddle.y  = -200
+    puddle.show = False
+    puddle.timer = 0
+    puddle.hitbox = {'desloc_x' : 45, 'desloc_y': -78, 'width': 90, 'height': 15}
+
+    # missile
+    missile.image = 'missile_0'
+    missile.x = 0
+    missile.y = boss.y
+    missile.speed = 1
+    missile.is_fired = False
+    missile.hitbox = {'desloc_x' : 6.5, 'desloc_y': -3, 'width': 13, 'height': 18}
+    missile.anim = {'play': True, 'repeat': True, 'index': 0, 'change': 10, 'timer': 0, 'frames': ['missile_0', 'missile_1', 'missile_2', 'missile_1']}
+
+
+    explosion.x = 0
+    explosion.y = 0
+    explosion.explode = False
+    explosion.anim = {'play': True, 'repeat': False, 'index': -1, 'change': 3, 'timer': 0, 'frames': ['explosion_0', 'explosion_1', 'explosion_2', 'explosion_3', 'explosion_4', 'explosion_5', 'explosion_6','explosion_7', 'explosion_8', 'explosion_9', 'explosion_10']}
 
 # execute animation
 def animate(anim):
@@ -185,7 +219,6 @@ def damaged():
             break
 
 def sound_step():
-    print(player.step_sound)
     if player.image == 'r_walk_1' or player.image == 'l_walk_1':
         if player.step_sound:
             sounds.footstep_01.play()
@@ -197,41 +230,11 @@ def sound_step():
     else:
         player.step_sound = True
 
-def restart_game():
-    global game_over_timer, dialog_on
-    game_over_timer = 100
-    dialog_on = False
+def play_sound_effect(sound, play):
+    if play:
+        sound.play()
+        play = False
 
-    # player
-    player.x = 50
-    player.y = HEIGHT - player.height * 2
-    player.life = player.max_life
-    player.current_life = []
-    player.is_invencible = False
-    player.is_damaged = False
-    player.running = False
-    player.direction = 'right'
-    get_player_life(player)
-
-    # gun
-    gun.bullets = []
-    gun.bullet_timer = 0
-    gun.max_ammo = 30
-    gun.ammo = 30
-
-    # boss
-    boss.x = WIDTH/2
-    boss.y = -50
-    boss.alive = False
-    boss.life = boss.max_life
-    boss.steps = .5
-    boss.actual_step = 0
-    boss.clock = 0
-
-    # missile
-    missile.x = 0
-    missile.y = boss.y
-    missile.is_fired = False
 
 # when key is pressed ------------------------------------------------
 def on_key_down(key):
@@ -274,7 +277,7 @@ def on_key_down(key):
 
             if 'QUIT GAME' in option:
                 if sounds_on: sounds.maximize.play()
-                actual_state = 'menu'
+                actual_state = 'paused' if state == 'paused' else 'menu'
                 input_blocker = True
                 state = 'confirm_exit'
     
@@ -315,7 +318,7 @@ def on_key_down(key):
 
             # Reolad ammo
             if key == keys.R and (gun.reloading == False) and gun.ammo < gun.max_ammo:
-                sounds.reload.play()
+                if sounds_on: sounds.reload.play()
                 gun.reloading = True
             
             # 13 = ENTER BUTTON for fire
@@ -329,7 +332,8 @@ def on_key_down(key):
             actual_state = 'playing'
 
 
-    if state == 'game_over':
+# GAME OVER CONFIGS ---------------------------------------------
+    if state == 'game_over' or state == 'win_game':
         if input_blocker:
             return
         
@@ -374,8 +378,7 @@ def on_key_up(key):
 get_music()
 
 def update():
-    global cutscene, state, game_over_timer, input_blocker, blocker_count, music_on, selected_option, dialog_on
-
+    global cutscene, state, input_blocker, blocker_count, music_on, selected_option, dialog_on
 
     if input_blocker:
         blocker_count += 1
@@ -410,17 +413,18 @@ def update():
                 player.image = animate(player.anim_r_walk)
                 player.x += player.speed
                 fire.x += player.speed
-                sound_step()
+                if sounds_on: sound_step()
 
             if (keyboard.left  or keyboard.a) and player.x > 25:
                 player.direction = 'left'
                 player.image = animate(player.anim_l_walk)
                 player.x -= player.speed
                 fire.x -= player.speed
-                sound_step()
+                if sounds_on: sound_step()
 
             # aim
             if keyboard.w or keyboard.up:
+                player.hitbox = {'desloc_x' : 15, 'desloc_y': 30, 'width': 30, 'height': 80}
                 if keyboard.left or keyboard.a:
                     player.image = animate(player.anim_l_firing)
                 elif keyboard.right or keyboard.d:
@@ -431,6 +435,8 @@ def update():
                     player.image = player.anim_l_firing['frames'][0]
                 elif player.direction == 'right':
                     player.image = player.anim_r_firing['frames'][0]
+            else:
+                player.hitbox = {'desloc_x' : 15, 'desloc_y': 26, 'width': 30, 'height': 60}
 
 
             # check conditions for jump
@@ -447,6 +453,8 @@ def update():
 
         # change jump variable when reach max height
         if (get_base(player) <= ground - player.jump_height):
+            if player.is_damaged:
+                cutscene = False
             player.is_jumping = False
             player.is_damaged = False
             player.jump_timer = 0
@@ -465,6 +473,7 @@ def update():
             player.stamin -= 1
 
         if player.is_damaged:
+            cutscene = True
             player.y -= player.jump_force
             if player.direction == 'left':
                 player.x += 10
@@ -484,32 +493,33 @@ def update():
                 life_point.image = animate(life_point.anim)
 
         if player.life == 0:
-            game_over_timer -= 1
-            if game_over_timer == 0:
-                state = 'game_over'
-                if sounds_on: sounds.game_over.play()
-                get_music()
+            state = 'game_over'
+            if sounds_on: sounds.game_over.play()
+            get_music()
 
 
         # verify colission player -> missile
-        if get_hitbox(player, player.hitbox).colliderect(get_hitbox(missile, missile.hitbox)) or get_hitbox(player, player.hitbox).colliderect(explosion._rect):
+        if get_hitbox(player, player.hitbox).colliderect(get_hitbox(missile, missile.hitbox)):
             if player.is_invencible == False:
                 damaged()
+                if sounds_on: 
+                    sound = choice([sounds.ouch_01, sounds.ouch_02])
+                    sound.play()
                 explosion.x = missile.x
                 explosion.y = missile.x
                 explosion.explode = True
                 explosion.anim['play'] = True
                 missile.y = -20
-                missile.x = 0
                 missile.is_fired = False
                 player.is_damaged = True
 
         
-        if get_hitbox(player, player.hitbox).colliderect(get_hitbox(boss, boss.left_tentacle)) or get_hitbox(player, player.hitbox).colliderect(get_hitbox(boss, boss.right_tentacle)) or get_hitbox(player, player.hitbox).colliderect(get_hitbox(boss, boss.acid)):
+        if get_hitbox(player, player.hitbox).colliderect(get_hitbox(boss, boss.left_tentacle)) or get_hitbox(player, player.hitbox).colliderect(get_hitbox(boss, boss.right_tentacle)) or get_hitbox(player, player.hitbox).colliderect(get_hitbox(boss, boss.acid)) or get_hitbox(player, player.hitbox).colliderect(get_hitbox(puddle, puddle.hitbox)) or get_hitbox(player, player.hitbox).colliderect(explosion._rect):
             if player.is_invencible == False:
                 damaged()
-                sound = choice([sounds.ouch_01, sounds.ouch_02])
-                sound.play()
+                if sounds_on:
+                    sound = choice([sounds.ouch_01, sounds.ouch_02])
+                    sound.play()
                 player.is_damaged =True
 
 ### GUN AND BULLET ACTIONS -------------------
@@ -534,7 +544,7 @@ def update():
             gun.bullets.append(bullet)
             gun.bullet_timer = 0
             gun.ammo -= 1
-            sounds.shot.play()
+            if sounds_on: sounds.shot.play()
 
         if fire.active:
             fire.image = animate(fire.anim)
@@ -590,15 +600,20 @@ def update():
 
 ### BOSS ACTIONS ----------------------------------------
         if boss.y == 10:
-            sounds.dialog_01.play()
+            if sounds_on: sounds.dialog_01.play()
 
         if boss.alive == False and player.x > WIDTH/3 and boss.y < 140:
             cutscene = True
             boss.y += 1
             r_tentacle.y += 1
             l_tentacle.y += 1
+            acid.y += 1
         
         if boss.y == 90: boss.alive = True
+
+        if boss.life <= 0:
+            state = 'win_game'
+            if sounds_on: sounds.you_win.play()
 
         if boss.alive:
             cutscene = False
@@ -608,6 +623,7 @@ def update():
             boss.x += boss.steps
             r_tentacle.x += boss.steps
             l_tentacle.x += boss.steps
+            acid.x += boss.steps
             if boss.x >= WIDTH - 140 or boss.x <= 140:
                 boss.steps = boss.steps * -1
 
@@ -616,6 +632,7 @@ def update():
             if boss.clock == boss.atack_rate:
                 attack = randint(0,4)
                 boss.actual_steps = boss.steps
+                if sounds_on: boss.sound_effect = True
 
                 if attack == 0:
                     boss.missile_atk = True
@@ -631,6 +648,7 @@ def update():
                     print('ataque dos dois tentaculos')
                 if attack == 4:
                     boss.acid_atk = True
+                    play_sound_effect(sounds.slime, boss.sound_effect)
                     print('ataque de acido')
 
 
@@ -792,20 +810,49 @@ def update():
                 boss.steps = 0
                 if boss.atk_timer < 30:
                     boss.acid = {'desloc_x' : 15, 'desloc_y': -60, 'width': 30, 'height': 70}
+                    acid.image = 'acid_0'
+                    acid.y = boss.y + 110
                     get_hitbox(boss, boss.acid)
                 elif boss.atk_timer < 70:
                     boss.acid = {'desloc_x' : 15, 'desloc_y': -60, 'width': 30, 'height': 150}
+                    acid.image = 'acid_1'
+                    acid.y = boss.y + 145
                     get_hitbox(boss, boss.acid)
                 elif boss.atk_timer < 100:
                     boss.acid = {'desloc_x' : 15, 'desloc_y': -60, 'width': 30, 'height': 330}
+                    acid.image = 'acid_2'
+                    acid.y = boss.y + 210
                     get_hitbox(boss, boss.acid)
                 else:
-                    boss.acid = {'desloc_x' : 15, 'desloc_y': -60, 'width': 30, 'height': 15}
+                    boss.acid = {'desloc_x' : 8, 'desloc_y': -60, 'width': 16, 'height': 10}
+                    acid.image = 'acid_0'
+                    acid.y = boss.y
                     get_hitbox(boss, boss.acid)
                     boss.acid_atk = False
                     boss.steps = boss.actual_steps
                     boss.atk_timer = 0
                     boss.clock = 0
+                    puddle.show = True
+                    puddle.x = acid.x
+                    puddle.y = ground - 85
+            
+            if puddle.show:
+                puddle.timer += 1
+                if puddle.timer == 30:
+                    puddle.hitbox = {'desloc_x' : 65, 'desloc_y': -40, 'width': 130, 'height': 15}
+                    puddle.image = "puddle_1"
+                    puddle.y = ground - 50
+                if puddle.timer == 60:
+                    puddle.hitbox = {'desloc_x' : 65, 'desloc_y': 10, 'width': 130, 'height': 15}
+                    puddle.image = "puddle_2"
+                    puddle.y = ground
+                if puddle.timer == 110: # RESET PUDDLE
+                    puddle.hitbox = {'desloc_x' : 45, 'desloc_y': -78, 'width': 90, 'height': 15}
+                    puddle.image = "puddle_0"
+                    puddle.y = -100
+                    puddle.timer = 0
+                    puddle.show = False
+                get_hitbox(puddle, puddle.hitbox)
 
 
 ### DRAW SPRITES ----------------------------------------
@@ -858,26 +905,31 @@ def draw():
     if state == 'playing':
         bg.draw()
 
+        if puddle.show: puddle.draw()
         player.draw()
-        screen.draw.rect(get_hitbox(player, player.hitbox), 'blue') # FOR DEBUG
+        if debug: screen.draw.rect(get_hitbox(player, player.hitbox), 'blue') # FOR DEBUG
         
-        # boss
+        # bossacid.draw()
         boss.draw()
         r_tentacle.draw()
         l_tentacle.draw()
+        if boss.acid_atk: acid.draw()
+
         if boss.alive:
             # boss life bar
             screen.draw.filled_rect(Rect((440, 20), (boss.life / 2, 10)), (200, 0, 0))
             screen.draw.rect(Rect((440, 20), (boss.max_life/2, 10)), (0, 0, 0))
             screen.draw.text(str(boss.life), (668, 33), fontsize=20, color="white")
 
-            screen.draw.rect(get_hitbox(boss, boss.body), 'pink') # FOR DEBUG
-            screen.draw.rect(get_hitbox(boss, boss.right_eye), 'blue') # FOR DEBUG
-            screen.draw.rect(get_hitbox(boss, boss.left_eye), 'blue') # FOR DEBUG
-            screen.draw.rect(get_hitbox(boss, boss.right_tentacle), 'red') # FOR DEBUG
-            screen.draw.rect(get_hitbox(boss, boss.left_tentacle), 'gray') # FOR DEBUG
-            screen.draw.rect(get_hitbox(boss, boss.mouth), 'green') # FOR DEBUG
-            screen.draw.rect(get_hitbox(boss, boss.acid), 'green') # FOR DEBUG
+            if debug:
+                screen.draw.rect(get_hitbox(boss, boss.body), 'pink') # FOR DEBUG
+                screen.draw.rect(get_hitbox(boss, boss.right_eye), 'blue') # FOR DEBUG
+                screen.draw.rect(get_hitbox(boss, boss.left_eye), 'blue') # FOR DEBUG
+                screen.draw.rect(get_hitbox(boss, boss.right_tentacle), 'red') # FOR DEBUG
+                screen.draw.rect(get_hitbox(boss, boss.left_tentacle), 'gray') # FOR DEBUG
+                screen.draw.rect(get_hitbox(boss, boss.mouth), 'brown') # FOR DEBUG
+                screen.draw.rect(get_hitbox(boss, boss.acid), 'green') # FOR DEBUG
+                screen.draw.rect(get_hitbox(puddle, puddle.hitbox), 'pink') # FOR DEBUG
         
         
         # bullet
@@ -886,12 +938,12 @@ def draw():
                 if bullet.is_fired:
                     bullet.draw()
                     fire.draw()
-                    screen.draw.rect(bullet._rect, 'red') # FOR DEBUG
+                    if debug: screen.draw.rect(bullet._rect, 'red') # FOR DEBUG
 
         # missile
         if missile.is_fired:
             missile.draw()
-            screen.draw.rect(get_hitbox(missile, missile.hitbox), 'blue') # FOR DEBUG
+            if debug: screen.draw.rect(get_hitbox(missile, missile.hitbox), 'blue') # FOR DEBUG
 
         # explosion
         if explosion.explode:
@@ -947,6 +999,30 @@ def draw():
         screen.draw.text('GAME OVER', (WIDTH * 0.32 + 2, 160), fontsize=60, color="gray")
         screen.draw.text('GAME OVER', (WIDTH * 0.32, 162), fontsize=60, color="black")
         screen.draw.filled_rect(Rect((0, 210), (WIDTH, 10)), (200, 0, 0))
+
+#       # show menu option
+        for i, text in enumerate(game_over_options):
+            y = 250 + i * 30
+            color = 'red' if i == selected_option else ('gray')
+            screen.draw.text(text, (WIDTH * 0.2 + 2, y + 1), fontsize=25, color='black')
+            screen.draw.text(text, (WIDTH * 0.2, y), fontsize=25, color=color)
+        arrow_x = WIDTH * 0.2 - 15
+        arrow_y = 250 + selected_option * 30
+        screen.draw.text('>', (arrow_x+2, arrow_y+1), fontsize=25, color='black')
+        screen.draw.text('>', (arrow_x, arrow_y), fontsize=25, color='red')
+
+# WIN SCREEN ------------------------------------------------------------
+    if state == 'win_game':
+        screen.clear()
+
+        screen.draw.filled_rect(Rect((0, 0), (WIDTH, HEIGHT)), (100, 100, 100))
+        screen.draw.filled_rect(Rect((0, 140), (WIDTH, 10)), (200, 0, 0))
+        screen.draw.text('YOU WIN', (WIDTH * 0.32 + 2, 160), fontsize=60, color="gray")
+        screen.draw.text('YOU WIN', (WIDTH * 0.32, 162), fontsize=60, color="black")
+        screen.draw.text("you've defeat the monster", (WIDTH * 0.32 + 2, 200 + 1), fontsize=25, color='gray')
+        screen.draw.text("you've defeat the monster", (WIDTH * 0.32, 200), fontsize=25, color='black')
+        screen.draw.filled_rect(Rect((0, 230), (WIDTH, 10)), (200, 0, 0))
+
 
 #       # show menu option
         for i, text in enumerate(game_over_options):
